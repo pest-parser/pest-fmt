@@ -1,0 +1,16 @@
+[package]
+name = "pest_fmt"
+version = "0.0.1"
+authors = ["192608617@qq.com"]
+edition = "2018"
+description = "..."
+repository = "https://github.com/GalAster/pest-fmt"
+license = "MPL-2.0"
+
+[dependencies]
+pest = "2.1.0"
+
+
+[dev-dependencies]
+pest_generator = "2.1.1"
+quote = "1.0"
