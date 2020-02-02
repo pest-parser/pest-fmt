@@ -1,6 +1,6 @@
 use pest::Span;
+use std::fmt::{Debug, Error, Formatter};
 pub use textwrap::indent;
-use std::fmt::{Display, Formatter, Error, Debug};
 
 pub fn is_one_line(span: Span) -> bool {
     let s = span.start_pos().line_col().0;
@@ -34,7 +34,6 @@ impl GrammarRule {
         return code;
     }
 }
-
 
 impl Debug for GrammarRule {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), Error> {

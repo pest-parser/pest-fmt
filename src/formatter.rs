@@ -3,6 +3,10 @@ use crate::{
     utils::{indent, GrammarRule},
 };
 use pest::{iterators::Pair, Parser};
+use std::{
+    fs::{read_to_string, File},
+    io::Write,
+};
 
 #[derive(Debug)]
 pub struct Settings {
@@ -12,27 +16,25 @@ pub struct Settings {
 }
 
 impl Settings {
-    pub fn format_file(&self, path: &str) -> String {
-        return String::new();
+    pub fn format_file(&self, path_from: &str, path_to: &str) -> Result<(), std::io::Error> {
+        let r = read_to_string(path_from)?;
+        let s = self.format(&r);
+        let mut file = File::create(path_to)?;
+        file.write_all(s.as_bytes())?;
+        return Ok(());
     }
     pub fn format(&self, text: &str) -> String {
         let pairs = PestParser::parse(Rule::grammar_rules, text).unwrap_or_else(|e| panic!("{}", e));
         let mut code = String::new();
         let mut codes = vec![];
-
         for pair in pairs {
             match pair.as_rule() {
-                Rule::EOI => {
-                    if self.pest_end_line {
-                        code.push_str("\n")
-                    }
-                }
+                Rule::EOI => continue,
                 Rule::COMMENT => println!("Comment:    {}\n", pair.as_str()),
                 Rule::grammar_rule => codes.push(self.format_grammar_rule(pair)),
                 _ => unreachable!(),
             };
         }
-        println!("{:?}", codes);
         let mut last = 0 as usize;
         let mut group = vec![];
         let mut groups = vec![];
@@ -40,15 +42,31 @@ impl Settings {
             let (s, e) = i.lines;
             if last + 1 == s {
                 group.push(i)
-            } else {
-                groups.push(group);
-                group = vec![]
+            }
+            else {
+                if group.len() != 0 {
+                    groups.push(group);
+                }
+                group = vec![i]
             }
             last = e
         }
         groups.push(group);
-        println!("{:?}", groups);
-        unreachable!();
+        for g in groups {
+            let mut length = vec![];
+            for r in &g {
+                length.push(r.identifier.chars().count())
+            }
+            let max = length.iter().max().unwrap();
+            for r in &g {
+                code.push_str(&r.to_string(*max));
+                code.push_str("\n")
+            }
+            code.push_str("\n");
+        }
+        if self.pest_end_line {
+            code.push_str("\n")
+        }
         return code;
     }
     fn format_grammar_rule(&self, pairs: Pair<Rule>) -> GrammarRule {
@@ -65,20 +83,28 @@ impl Settings {
                 Rule::identifier => identifier = pair.as_str().to_string(),
                 Rule::silent_modifier => modifier = pair.as_str().to_string(),
                 Rule::atomic_modifier => modifier = pair.as_str().to_string(),
+                Rule::non_atomic_modifier => modifier = pair.as_str().to_string(),
                 Rule::compound_atomic_modifier => modifier = pair.as_str().to_string(),
                 Rule::expression => {
                     let s = self.format_expression(pair);
                     if start == end {
-                        code = format!("{{ {} }}", s.join(" | "));
-                    } else if self.pest_sequence_first {
+                        code = format!("{{{}}}", s.join("|"));
+                    }
+                    else if self.pest_sequence_first {
                         let space = std::iter::repeat(' ').take(self.pest_indent - 2).collect::<String>();
                         code = format!("{{\n  {}}}", indent(&s.join("\n| "), &space));
-                    } else {
+                    }
+                    else {
                         let space = std::iter::repeat(' ').take(self.pest_indent).collect::<String>();
                         code = format!("{{\n{}}}", indent(&s.join(" |\n"), &space));
                     }
                 }
-                _ => unreachable!(),
+                _ => {
+                    println!("Rule:    {:?}", pair.as_rule());
+                    println!("Span:    {:?}", pair.as_span());
+                    println!("Text:    {}\n", pair.as_str());
+                    unreachable!();
+                }
             };
         }
         return GrammarRule { identifier, modifier, code, lines: (start, end) };
@@ -115,8 +141,9 @@ impl Settings {
                 Rule::range => code.push_str(pair.as_str()),
                 Rule::expression => {
                     let e = self.format_expression(pair);
-                    code.push_str(&e.join(" | "))
+                    code.push_str(&e.join("|"))
                 }
+                Rule::_push => code.push_str(&self.format_term(pair)),
                 Rule::repeat_exact => code.push_str(&format_repeat_exact(pair)),
                 Rule::repeat_min_max => code.push_str(&format_repeat_min_max(pair)),
                 _ => unreachable!(),
