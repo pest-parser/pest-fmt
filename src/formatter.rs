@@ -1,6 +1,6 @@
 use crate::{
     grammar::{PestParser, Rule},
-    utils::{get_lines, indent, is_one_line, GrammarRule},
+    utils::{indent, GrammarRule},
 };
 use pest::{iterators::Pair, Parser};
 
@@ -18,6 +18,8 @@ impl Settings {
     pub fn format(&self, text: &str) -> String {
         let pairs = PestParser::parse(Rule::grammar_rules, text).unwrap_or_else(|e| panic!("{}", e));
         let mut code = String::new();
+        let mut codes = vec![];
+
         for pair in pairs {
             match pair.as_rule() {
                 Rule::EOI => {
@@ -25,17 +27,27 @@ impl Settings {
                         code.push_str("\n")
                     }
                 }
-                Rule::COMMENT => {
-                    println!("Comment:    {}\n", pair.as_str());
-                }
-                Rule::grammar_rule => {
-                    let out = self.format_grammar_rule(pair);
-                    println!("Grammar:    {:?}\n", out.clone());
-                    code.push_str(&format!("{:?}", out))
-                }
+                Rule::COMMENT => println!("Comment:    {}\n", pair.as_str()),
+                Rule::grammar_rule => codes.push(self.format_grammar_rule(pair)),
                 _ => unreachable!(),
             };
         }
+        println!("{:?}", codes);
+        let mut last = 0 as usize;
+        let mut group = vec![];
+        let mut groups = vec![];
+        for i in codes {
+            let (s, e) = i.lines;
+            if last + 1 == s {
+                group.push(i)
+            } else {
+                groups.push(group);
+                group = vec![]
+            }
+            last = e
+        }
+        groups.push(group);
+        println!("{:?}", groups);
         unreachable!();
         return code;
     }
@@ -43,8 +55,8 @@ impl Settings {
         let mut code = String::new();
         let mut modifier = " ".to_string();
         let mut identifier = String::new();
-        let one_line = is_one_line(pairs.as_span());
-        let lines = get_lines(pairs.as_span());
+        let start = pairs.as_span().start_pos().line_col().0;
+        let end = pairs.as_span().end_pos().line_col().0;
         for pair in pairs.into_inner() {
             match pair.as_rule() {
                 Rule::assignment_operator => continue,
@@ -56,14 +68,12 @@ impl Settings {
                 Rule::compound_atomic_modifier => modifier = pair.as_str().to_string(),
                 Rule::expression => {
                     let s = self.format_expression(pair);
-                    if one_line {
+                    if start == end {
                         code = format!("{{ {} }}", s.join(" | "));
-                    }
-                    else if self.pest_sequence_first {
+                    } else if self.pest_sequence_first {
                         let space = std::iter::repeat(' ').take(self.pest_indent - 2).collect::<String>();
                         code = format!("{{\n  {}}}", indent(&s.join("\n| "), &space));
-                    }
-                    else {
+                    } else {
                         let space = std::iter::repeat(' ').take(self.pest_indent).collect::<String>();
                         code = format!("{{\n{}}}", indent(&s.join(" |\n"), &space));
                     }
@@ -71,12 +81,11 @@ impl Settings {
                 _ => unreachable!(),
             };
         }
-        return GrammarRule { identifier, modifier, code, lines };
+        return GrammarRule { identifier, modifier, code, lines: (start, end) };
     }
     fn format_expression(&self, pairs: Pair<Rule>) -> Vec<String> {
         let mut code = vec![];
         let mut term = String::new();
-        let mut id = "";
         for pair in pairs.into_inner() {
             match pair.as_rule() {
                 Rule::choice_operator => {
