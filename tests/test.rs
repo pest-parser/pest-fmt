@@ -35,7 +35,6 @@ fn valkyrie_b() -> Result<(), Error> {
     set.format_file("tests/valkyrie.pest", "tests/out/valkyrie_b.pest")
 }
 
-
 #[test]
 fn arc_a() -> Result<(), Error> {
     let set = Settings::default();

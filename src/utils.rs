@@ -45,7 +45,6 @@ impl GrammarRule {
         code.push_str(" = ");
         code.push_str(&self.modifier);
         code.push_str(&self.code);
-        code.push_str("\n");
         return code;
     }
 }
