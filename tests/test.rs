@@ -5,7 +5,7 @@ use std::io::Error;
 
 #[test]
 fn pest_a() -> Result<(), Error> {
-    let set = Settings { pest_indent: 4, pest_end_line: true, pest_sequence_first: true };
+    let set = Settings::default();
     let file = include_str!("pest.pest");
     println!("{}", set.format(file));
     set.format_file("tests/pest.pest", "tests/out/pest_a.pest")
@@ -13,7 +13,7 @@ fn pest_a() -> Result<(), Error> {
 
 #[test]
 fn pest_b() -> Result<(), Error> {
-    let set = Settings { pest_indent: 2, pest_end_line: true, pest_sequence_first: false };
+    let set = Settings { pest_indent: 2, pest_sequence_first: false };
     let file = include_str!("pest.pest");
     println!("{}", set.format(file));
     set.format_file("tests/pest.pest", "tests/out/pest_b.pest")
@@ -21,7 +21,7 @@ fn pest_b() -> Result<(), Error> {
 
 #[test]
 fn valkyrie_a() -> Result<(), Error> {
-    let set = Settings { pest_indent: 4, pest_end_line: true, pest_sequence_first: true };
+    let set = Settings::default();
     let file = include_str!("valkyrie.pest");
     println!("{}", set.format(file));
     set.format_file("tests/valkyrie.pest", "tests/out/valkyrie_a.pest")
@@ -29,8 +29,17 @@ fn valkyrie_a() -> Result<(), Error> {
 
 #[test]
 fn valkyrie_b() -> Result<(), Error> {
-    let set = Settings { pest_indent: 2, pest_end_line: true, pest_sequence_first: false };
+    let set = Settings { pest_indent: 2, pest_sequence_first: false };
     let file = include_str!("valkyrie.pest");
     println!("{}", set.format(file));
     set.format_file("tests/valkyrie.pest", "tests/out/valkyrie_b.pest")
+}
+
+
+#[test]
+fn arc_a() -> Result<(), Error> {
+    let set = Settings::default();
+    let file = include_str!("arc.pest");
+    println!("{}", set.format(file));
+    set.format_file("tests/arc.pest", "tests/out/arc_a.pest")
 }

@@ -7,9 +7,11 @@ extern crate pest_generator;
 #[cfg(test)]
 extern crate proc_macro;
 
+#[cfg(test)]
+mod pre_build;
+
 pub mod formatter;
 pub mod grammar;
-mod pre_build;
 pub mod utils;
 
 pub use formatter::Settings;

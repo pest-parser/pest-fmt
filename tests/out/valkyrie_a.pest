@@ -11,11 +11,14 @@ statement =  {
   | expression
 }
 
+/*====================================================================================================================*/
 emptyStatement =  {eos|Separate}
 eos            =  {Semicolon}
 comma_or_semi  = _{Comma|Semicolon}
 block_or_stmt  = _{block|Set ~ statement}
 
+/*====================================================================================================================*/
+//FIXME: 修复 nested using
 importStatement   =  {
     Import ~ Dot* ~ use_alias
   | Import ~ Dot* ~ use_module_select
@@ -28,13 +31,16 @@ module_block      =  {"{" ~ module_tuple ~ (comma_or_semi? ~ module_tuple)* ~ co
 module_tuple      =  {use_alias|use_module_select}
 ModuleSplit       = _{Dot|Proportion}
 
+//!#C678DD: With|Import|As
 With   = @{"with"}
 Import = @{"import"}
 As     = @{"as"}
 
+/*====================================================================================================================*/
 controlFlow = _{if_statement|for_statement}
 block       = !{"{" ~ statement+ ~ "}"}
 
+/*====================================================================================================================*/
 if_statement   =  {if_nested_else|if_nested|if_single_else|if_single}
 if_single      = _{If ~ condition ~ block}
 if_nested      = _{If ~ condition ~ block ~ else_if_block+}
@@ -43,19 +49,25 @@ if_nested_else = _{If ~ condition ~ block ~ else_if_block+ ~ if_else_block}
 else_if_block  = _{Else ~ If ~ condition ~ block}
 if_else_block  = _{Else ~ block}
 
+//!#C678DD: If|Else
 If   = @{"if"}
 Else = @{"else"}
 
+/*====================================================================================================================*/
 for_statement =  {For ~ for_in_loop}
 for_in_loop   =  {SYMBOL ~ In ~ expr ~ block}
 
+//!#C678DD: For|In
 For = @{"for"}
 In  = @{"in"}
 
+/*====================================================================================================================*/
+//!#C678DD: Return|Break|Pass
 Return = @{"return"}
 Break  = @{"break"}
 Pass   = @{"pass"}
 
+/*====================================================================================================================*/
 traitStatement      =  {trait_head ~ "{" ~ traitExpression* ~ "}"}
 trait_head          = _{Trait ~ SYMBOL ~ classExtend?}
 traitExpression     =  {interfaceFunction ~ type_hint ~ comma_or_semi?}
@@ -64,6 +76,7 @@ interfaceParameters =  {expr ~ SYMBOL ~ (Comma ~ expr ~ SYMBOL)*}
 classExtend         = ${"extend"}
 Trait               = @{"trait"}
 
+/*====================================================================================================================*/
 assignStatement =  {Let ~ assign_terms}
 assign_terms    = _{
     "(" ~ assign_name ~ ")" ~ type_hint? ~ block_or_stmt?
@@ -72,8 +85,10 @@ assign_terms    = _{
 assign_name     = _{assign_pair ~ (Comma ~ assign_pair)* ~ Comma?}
 assign_pair     =  {(!(SYMBOL ~ (Comma|Set|Colon|Semicolon|"{"|"}"|"("|")"|"<"|">")) ~ SYMBOL)* ~ Symbol}
 
+///#C678DD
 Let = @{"let"}
 
+/*====================================================================================================================*/
 defineStatement        =  {Def ~ define_terms}
 define_terms           = _{
     assign_pair ~ parametric_types ~ define_parameter ~ type_hint? ~ parametric_terms* ~ block_or_stmt
@@ -91,20 +106,26 @@ parametric_types_where =  {
     Where ~ SYMBOL ~ (Comma ~ SYMBOL)* ~ eos?
 }
 
+//!#C678DD: Def|Where
 Def   = @{"def"}
 Where = @{"where"}
 
+/*====================================================================================================================*/
+//!Orange:annotation_call
 annotation      =  {annotation_call+ ~ statement}
 annotation_call = @{At ~ (list|apply|Symbol)}
 
+/*====================================================================================================================*/
 apply    =  {
     generic_type? ~ "(" ~ apply_kv? ~ (Comma ~ apply_kv)* ~ Comma? ~ ")"
 }
 apply_kv =  {SYMBOL ~ Colon ~ expr|expr}
 
+///#61AFEF
 function_name   =  {SYMBOL}
 function_module =  {(namespace ~ Dot)? ~ (SYMBOL ~ Dot)*}
 
+/*====================================================================================================================*/
 expression    =  {expr ~ eos?}
 expr          = !{
     trinocular
@@ -122,11 +143,21 @@ trinocular    =  {
 }
 dot_call      =  {term ~ Dot ~ (Integer|Symbol)}
 
+/*====================================================================================================================*/
+//!#E06C75: type_hint|generic_type|parametric_types_pair
+//type_expr = _{type_term~ TypeInfix ~type_term}
+//type_term = {TypePrefix* ~ type_node ~ TypeSuffix*}
+//type_node = {"(" ~ type_expr ~ ")"|data}
 type_hint    =  {Colon ~ expr}
 generic_type =  {"<" ~ expr ~ (Comma ~ expr)* ~ Comma? ~ ">"}
 
+//!#C678DD: Type|To
 Type = @{"type"}
 
+//TypePrefix = @{Plus|Minus}
+//TypeSuffix = @{Question}
+//TypeInfix = @{Or}
+/*====================================================================================================================*/
 data        = ${dict|list|Null|Unit|Boolean|Byte|Number|String|Symbol}
 dict        =  {"{" ~ key_value? ~ (Comma ~ key_value)* ~ Comma? ~ "}"}
 list        =  {"[" ~ expr? ~ (Comma ~ expr)* ~ Comma? ~ "]"}
@@ -137,24 +168,35 @@ key_valid   = !{Integer|SYMBOL|String}
 index_range = !{expr? ~ Colon ~ expr?}
 index_step  = !{expr? ~ Colon ~ expr? ~ Colon ~ expr?}
 
+/*====================================================================================================================*/
+//!#D19A66: Null|Unit
 Null = @{"null"}
 Unit = !{"(" ~ ")"}
 
+/*====================================================================================================================*/
+///#D19A66
 Boolean = !{True|False}
 True    = @{"true"}
 False   = @{"false"}
 
+/*====================================================================================================================*/
+///#D19A66
 Byte     = ${Byte_BIN|Byte_OCT|Byte_HEX}
 Byte_BIN = ${Zero ~ B ~ (Underline? ~ ASCII_BIN_DIGIT)+}
 Byte_OCT = ${Zero ~ O ~ (Underline? ~ ASCII_OCT_DIGIT)+}
 Byte_HEX = ${Zero ~ X ~ (Underline? ~ ASCII_HEX_DIGIT)+}
 
+/*====================================================================================================================*/
+//!#D19A66: Integer|Decimal|DecimalBad
 Number     = ${Complex|Decimal|DecimalBad|Integer}
 Decimal    = ${Integer ~ Dot ~ ASCII_DIGIT+}
 DecimalBad = ${Integer ~ Dot|Dot ~ ASCII_DIGIT+}
 Integer    = @{Zero|ASCII_NONZERO_DIGIT ~ (Underline? ~ ASCII_DIGIT)*}
 Complex    =  {(Decimal|Integer) ~ SYMBOL}
 
+/*====================================================================================================================*/
+//!#3C963C: String
+//!#98C379: StringText|StringLiteralText
 String            = ${SYMBOL? ~ (StringNormal|StringLiteral|StringEmpty)}
 StringLiteral     =  {StringStart ~ StringLiteralText ~ StringEnd}
 StringNormal      =  {Quotation ~ StringText ~ Quotation}
@@ -164,20 +206,30 @@ StringText        =  {(Solidus ~ (Solidus|Quotation)|!Quotation ~ ANY)*}
 StringStart       = @{Apostrophe{1} ~ (Apostrophe*)}
 StringEnd         = @{POP ~ Apostrophe{1}}
 
+/*====================================================================================================================*/
+// NEWLINE = @{"\r"~"\n"|"\r"|"\n"}
 WHITESPACE = _{NEWLINE|SPACE_SEPARATOR|"\t"}
 
+//!#7F848E: MultiLineComment
 COMMENT =  {MultiLineComment|LineCommentSimple|LineCommentTodo|LineCommentFixme|LineCommentWarning}
 
+///Gray
 LineCommentSimple = ${"///" ~ (!NEWLINE ~ ANY)*}
 
+///Green
 LineCommentTodo = ${"//?" ~ (!NEWLINE ~ ANY)*}
 
+///Red
 LineCommentFixme = ${"//!" ~ (!NEWLINE ~ ANY)*}
 
+///Yellow
 LineCommentWarning = ${"//*" ~ (!NEWLINE ~ ANY)*}
 
+///Gray
 MultiLineComment = ${"%%%" ~ (MultiLineComment|!"%%%" ~ ANY)* ~ "%%%"}
 
+/*====================================================================================================================*/
+///#61AFEF
 Symbol    = ${namespace|Underline+|SYMBOL}
 namespace = ${SYMBOL ~ (Proportion ~ SYMBOL)+}
 SYMBOL    = @{
@@ -186,11 +238,14 @@ SYMBOL    = @{
 }
 Keywords  = _{If|For}
 
+/*====================================================================================================================*/
 Zero = _{"0"}
 X    = _{"x"|"X"}
 O    = _{"o"|"O"}
 B    = _{"b"|"B"}
 
+/*====================================================================================================================*/
+//!#56B6C2: Prefix|Infix|Postfix
 Prefix = @{
     (Bang|Plus|Minus|Star)
 }
@@ -216,6 +271,7 @@ Infix  = _{
   | Dot
 }
 
+///#56B6C2
 Set = @{"="}
 
 Or     = @{"|"}
@@ -226,19 +282,35 @@ Slash   = @{"/"}
 Solidus = @{"\\"}
 
 Proportion = @{"::"|"∷"}
-Comma      = @{","|"，"}
-Dot        = @{"."}
-Separate   = @{";;"}
-Semicolon  = @{";"|"；"}
-Colon      = @{":"|"："}
 
+//U+2237
+Comma = @{","|"，"}
+
+//U+FF0C
+Dot       = @{"."}
+Separate  = @{";;"}
+Semicolon = @{";"|"；"}
+
+//U+FF1B
+Colon = @{":"|"："}
+
+//U+FF1A
+///#56B6C2
 Question  = @{"?"}
 Underline = @{"_"}
 
-Load        = @{"<<<"|"⋘"}
-Save        = @{">>>"|"⋙"}
-LeftShift   = @{"<<"|"≪"}
-RightShift  = @{">>"|"≫"}
+Load = @{"<<<"|"⋘"}
+
+//U+22D8
+Save = @{">>>"|"⋙"}
+
+//U+22D9
+LeftShift = @{"<<"|"≪"}
+
+//U+226A
+RightShift = @{">>"|"≫"}
+
+//U+226B
 LessEqual   = @{"<="}
 GraterEqual = @{">="}
 Less        = @{"<"}
@@ -249,21 +321,34 @@ NotEquivalent = @{"=!="}
 Equal         = @{"=="}
 NotEqual      = @{"!="|"≠"}
 
+//U+2260
 Plus  = @{"+"}
 Minus = @{"-"}
 
-Multiply      = @{Star|"×"}
-CenterDot     = @{"⋅"}
-Kronecker     = @{"⊗"}
-TensorProduct = @{"⊙"}
-Divide        = @{Slash|"÷"}
-Quotient      = @{"//"}
-Modulo        = @{"%"}
-Remainder     = @{"⁒"}
+Multiply = @{Star|"×"}
 
+//U+00D7
+CenterDot = @{"⋅"}
+
+//U+22C5
+Kronecker = @{"⊗"}
+
+//U+2297
+TensorProduct = @{"⊙"}
+
+//U+2299
+Divide = @{Slash|"÷"}
+
+//U+00F7
+Quotient  = @{"//"}
+Modulo    = @{"%"}
+Remainder = @{"⁒"}
+
+//U+2052 //⸓
 Power = @{"^"}
 Surd  = @{"√"}
 
+//U+221A
 Increase = @{"++"}
 Decrease = @{"--"}
 
@@ -272,19 +357,29 @@ To = @{"->"}
 Elvis = @{":?"}
 Map   = @{"/@"}
 
-Quote      = @{"`"}
-Acute      = @{"´"}
+Quote = @{"`"}
+Acute = @{"´"}
+
+// U+00B4
 Apostrophe = @{"'"}
 Quotation  = @{"\""}
 
-LogicOr  = @{"||"|"∧"}
+LogicOr = @{"||"|"∧"}
+
+//U+2227
 LogicAnd = @{"&&"|"∨"}
+
+//U+2228
 LogicNot = @{"¬"}
 
+//U+00AC
 Ellipsis = @{"..."|"…"}
 
+// U+2026
 LogicXor = @{"⊕"}
-MapAll   = @{"//@"}
+
+//U+2295
+MapAll = @{"//@"}
 
 Output = @{"%%"}
 
@@ -299,5 +394,4 @@ Sharp = @{"#"}
 Curry = @{"@@@"}
 Apply = @{"@@"}
 At    = @{"@"}
-
 

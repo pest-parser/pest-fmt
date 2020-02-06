@@ -56,7 +56,6 @@ pub enum Rule {
     quote,
     single_quote,
     range_operator,
-    newline,
     WHITESPACE,
     block_comment,
     COMMENT,
@@ -349,28 +348,33 @@ impl ::pest::Parser<Rule> for PestParser {
                 }
                 #[inline]
                 #[allow(non_snake_case, unused_variables)]
-                pub fn newline(state: Box<::pest::ParserState<Rule>>) -> ::pest::ParseResult<Box<::pest::ParserState<Rule>>> {
-                    state.match_string("\n").or_else(|state| state.match_string("\r\n"))
-                }
-                #[inline]
-                #[allow(non_snake_case, unused_variables)]
                 pub fn WHITESPACE(state: Box<::pest::ParserState<Rule>>) -> ::pest::ParseResult<Box<::pest::ParserState<Rule>>> {
-                    state.atomic(::pest::Atomicity::Atomic, |state| state.match_string(" ").or_else(|state| state.match_string("\t")).or_else(|state| self::newline(state)))
+                    state.rule(Rule::WHITESPACE, |state| state.atomic(::pest::Atomicity::Atomic, |state| self::SPACE_SEPARATOR(state).or_else(|state| self::NEWLINE(state))))
                 }
                 #[inline]
                 #[allow(non_snake_case, unused_variables)]
                 pub fn block_comment(state: Box<::pest::ParserState<Rule>>) -> ::pest::ParseResult<Box<::pest::ParserState<Rule>>> {
-                    state.sequence(|state| state.match_string("/*").and_then(|state| super::hidden::skip(state)).and_then(|state| state.sequence(|state| state.optional(|state| self::block_comment(state).or_else(|state| state.sequence(|state| state.lookahead(false, |state| state.match_string("*/")).and_then(|state| super::hidden::skip(state)).and_then(|state| self::ANY(state)))).and_then(|state| state.repeat(|state| state.sequence(|state| super::hidden::skip(state).and_then(|state| self::block_comment(state).or_else(|state| state.sequence(|state| state.lookahead(false, |state| state.match_string("*/")).and_then(|state| super::hidden::skip(state)).and_then(|state| self::ANY(state))))))))))).and_then(|state| super::hidden::skip(state)).and_then(|state| state.match_string("*/")))
+                    state.rule(Rule::block_comment, |state| state.sequence(|state| state.match_string("/*").and_then(|state| super::hidden::skip(state)).and_then(|state| state.sequence(|state| state.optional(|state| self::block_comment(state).or_else(|state| state.sequence(|state| state.lookahead(false, |state| state.match_string("*/")).and_then(|state| super::hidden::skip(state)).and_then(|state| self::ANY(state)))).and_then(|state| state.repeat(|state| state.sequence(|state| super::hidden::skip(state).and_then(|state| self::block_comment(state).or_else(|state| state.sequence(|state| state.lookahead(false, |state| state.match_string("*/")).and_then(|state| super::hidden::skip(state)).and_then(|state| self::ANY(state))))))))))).and_then(|state| super::hidden::skip(state)).and_then(|state| state.match_string("*/"))))
                 }
                 #[inline]
                 #[allow(non_snake_case, unused_variables)]
                 pub fn COMMENT(state: Box<::pest::ParserState<Rule>>) -> ::pest::ParseResult<Box<::pest::ParserState<Rule>>> {
-                    state.atomic(::pest::Atomicity::Atomic, |state| self::block_comment(state).or_else(|state| state.sequence(|state| state.match_string("//").and_then(|state| state.repeat(|state| state.sequence(|state| state.lookahead(false, |state| self::newline(state)).and_then(|state| self::ANY(state))))))))
+                    state.rule(Rule::COMMENT, |state| state.atomic(::pest::Atomicity::Atomic, |state| self::block_comment(state).or_else(|state| state.sequence(|state| state.match_string("//").and_then(|state| state.repeat(|state| state.sequence(|state| state.lookahead(false, |state| self::NEWLINE(state)).and_then(|state| self::ANY(state)))))))))
                 }
                 #[inline]
                 #[allow(dead_code, non_snake_case, unused_variables)]
-                pub fn ANY(state: Box<::pest::ParserState<Rule>>) -> ::pest::ParseResult<Box<::pest::ParserState<Rule>>> {
-                    state.skip(1)
+                fn SPACE_SEPARATOR(state: Box<::pest::ParserState<Rule>>) -> ::pest::ParseResult<Box<::pest::ParserState<Rule>>> {
+                    state.match_char_by(::pest::unicode::SPACE_SEPARATOR)
+                }
+                #[inline]
+                #[allow(dead_code, non_snake_case, unused_variables)]
+                pub fn NEWLINE(state: Box<::pest::ParserState<Rule>>) -> ::pest::ParseResult<Box<::pest::ParserState<Rule>>> {
+                    state.match_string("\n").or_else(|state| state.match_string("\r\n")).or_else(|state| state.match_string("\r"))
+                }
+                #[inline]
+                #[allow(dead_code, non_snake_case, unused_variables)]
+                pub fn SOI(state: Box<::pest::ParserState<Rule>>) -> ::pest::ParseResult<Box<::pest::ParserState<Rule>>> {
+                    state.start_of_input()
                 }
                 #[inline]
                 #[allow(dead_code, non_snake_case, unused_variables)]
@@ -379,8 +383,8 @@ impl ::pest::Parser<Rule> for PestParser {
                 }
                 #[inline]
                 #[allow(dead_code, non_snake_case, unused_variables)]
-                pub fn SOI(state: Box<::pest::ParserState<Rule>>) -> ::pest::ParseResult<Box<::pest::ParserState<Rule>>> {
-                    state.start_of_input()
+                pub fn ANY(state: Box<::pest::ParserState<Rule>>) -> ::pest::ParseResult<Box<::pest::ParserState<Rule>>> {
+                    state.skip(1)
                 }
             }
             pub use self::visible::*;
@@ -439,7 +443,6 @@ impl ::pest::Parser<Rule> for PestParser {
             Rule::quote => rules::quote(state),
             Rule::single_quote => rules::single_quote(state),
             Rule::range_operator => rules::range_operator(state),
-            Rule::newline => rules::newline(state),
             Rule::WHITESPACE => rules::WHITESPACE(state),
             Rule::block_comment => rules::block_comment(state),
             Rule::COMMENT => rules::COMMENT(state),

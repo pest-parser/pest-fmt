@@ -1,6 +1,13 @@
+use crate::Settings;
 use pest::Span;
 use std::fmt::{Debug, Error, Formatter};
 pub use textwrap::indent;
+
+impl Default for Settings {
+    fn default() -> Self {
+        Settings { pest_indent: 4, pest_sequence_first: true }
+    }
+}
 
 pub fn is_one_line(span: Span) -> bool {
     let s = span.start_pos().line_col().0;
@@ -16,6 +23,7 @@ pub fn get_lines(span: Span) -> (usize, usize) {
 
 #[derive(Clone)]
 pub struct GrammarRule {
+    pub is_comment: bool,
     pub identifier: String,
     pub modifier: String,
     pub code: String,
@@ -23,7 +31,13 @@ pub struct GrammarRule {
 }
 
 impl GrammarRule {
+    pub fn comment(c: &str) -> Self {
+        GrammarRule { is_comment: true, identifier: "".to_string(), modifier: "".to_string(), code: c.to_string(), lines: (0, 0) }
+    }
     pub fn to_string(&self, indent: usize) -> String {
+        if self.is_comment {
+            return self.code.clone();
+        }
         let mut code = self.identifier.clone();
         while code.chars().count() < indent {
             code.push_str(" ")
@@ -31,6 +45,7 @@ impl GrammarRule {
         code.push_str(" = ");
         code.push_str(&self.modifier);
         code.push_str(&self.code);
+        code.push_str("\n");
         return code;
     }
 }

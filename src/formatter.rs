@@ -11,7 +11,6 @@ use std::{
 #[derive(Debug)]
 pub struct Settings {
     pub pest_indent: usize,
-    pub pest_end_line: bool,
     pub pest_sequence_first: bool,
 }
 
@@ -30,8 +29,9 @@ impl Settings {
         for pair in pairs {
             match pair.as_rule() {
                 Rule::EOI => continue,
-                Rule::COMMENT => println!("Comment:    {}\n", pair.as_str()),
+                Rule::COMMENT => codes.push(GrammarRule { is_comment: true, identifier: String::new(), modifier: String::new(), code: pair.as_str().trim_end().to_string(), lines: (0, 0) }),
                 Rule::grammar_rule => codes.push(self.format_grammar_rule(pair)),
+                Rule::WHITESPACE => continue,
                 _ => unreachable!(),
             };
         }
@@ -42,8 +42,7 @@ impl Settings {
             let (s, e) = i.lines;
             if last + 1 == s {
                 group.push(i)
-            }
-            else {
+            } else {
                 if group.len() != 0 {
                     groups.push(group);
                 }
@@ -60,12 +59,8 @@ impl Settings {
             let max = length.iter().max().unwrap();
             for r in &g {
                 code.push_str(&r.to_string(*max));
-                code.push_str("\n")
             }
             code.push_str("\n");
-        }
-        if self.pest_end_line {
-            code.push_str("\n")
         }
         return code;
     }
@@ -77,6 +72,7 @@ impl Settings {
         let end = pairs.as_span().end_pos().line_col().0;
         for pair in pairs.into_inner() {
             match pair.as_rule() {
+                Rule::WHITESPACE => continue,
                 Rule::assignment_operator => continue,
                 Rule::opening_brace => continue,
                 Rule::closing_brace => continue,
@@ -89,12 +85,10 @@ impl Settings {
                     let s = self.format_expression(pair);
                     if start == end {
                         code = format!("{{{}}}", s.join("|"));
-                    }
-                    else if self.pest_sequence_first {
+                    } else if self.pest_sequence_first {
                         let space = std::iter::repeat(' ').take(self.pest_indent - 2).collect::<String>();
                         code = format!("{{\n  {}}}", indent(&s.join("\n| "), &space));
-                    }
-                    else {
+                    } else {
                         let space = std::iter::repeat(' ').take(self.pest_indent).collect::<String>();
                         code = format!("{{\n{}}}", indent(&s.join(" |\n"), &space));
                     }
@@ -107,13 +101,14 @@ impl Settings {
                 }
             };
         }
-        return GrammarRule { identifier, modifier, code, lines: (start, end) };
+        return GrammarRule { is_comment: false, identifier, modifier, code, lines: (start, end) };
     }
     fn format_expression(&self, pairs: Pair<Rule>) -> Vec<String> {
         let mut code = vec![];
         let mut term = String::new();
         for pair in pairs.into_inner() {
             match pair.as_rule() {
+                Rule::WHITESPACE => continue,
                 Rule::choice_operator => {
                     code.push(term.clone());
                     term = String::new()
@@ -130,6 +125,7 @@ impl Settings {
         let mut code = String::new();
         for pair in pairs.into_inner() {
             match pair.as_rule() {
+                Rule::WHITESPACE => continue,
                 Rule::negative_predicate_operator => code.push_str(pair.as_str()),
                 Rule::repeat_once_operator => code.push_str(pair.as_str()),
                 Rule::optional_operator => code.push_str(pair.as_str()),
@@ -144,9 +140,10 @@ impl Settings {
                     code.push_str(&e.join("|"))
                 }
                 Rule::_push => code.push_str(&self.format_term(pair)),
-                Rule::repeat_exact => code.push_str(&format_repeat_exact(pair)),
+                Rule::repeat_min => code.push_str(&format_repeat_min_max(pair)),
+                Rule::repeat_exact => code.push_str(&format_repeat_min_max(pair)),
                 Rule::repeat_min_max => code.push_str(&format_repeat_min_max(pair)),
-                _ => unreachable!(),
+                _ => unreachable!()
             };
         }
         return code;
@@ -170,6 +167,7 @@ fn format_repeat_min_max(pairs: Pair<Rule>) -> String {
     let mut code = String::new();
     for pair in pairs.into_inner() {
         match pair.as_rule() {
+            Rule::WHITESPACE => continue,
             Rule::opening_brace => code.push_str(pair.as_str()),
             Rule::closing_brace => code.push_str(pair.as_str()),
             Rule::comma => code.push_str(", "),
