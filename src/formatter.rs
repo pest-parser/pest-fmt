@@ -8,12 +8,21 @@ use std::{
     io::Write,
 };
 
-#[derive(Debug)]
 pub struct Settings {
     pub pest_indent: usize,
+    pub pest_choice_hanging: bool,
     pub pest_choice_first: bool,
+    pub pest_set_alignment: bool,
+    pub pest_blank_lines: Option<usize>,
+    /// spaces between `=`
+    pub pest_set_space: usize,
+    /// spaces between `|`
     pub pest_choice_space: usize,
+    /// spaces between `{ }`
     pub pest_braces_space: usize,
+    /// spaces between `~`
+    pub pest_sequence_space: usize,
+    /// spaces between `( )`
     pub pest_parentheses_space: usize,
 }
 
@@ -125,7 +134,10 @@ impl Settings {
                     code.push(term.clone());
                     term = String::new()
                 }
-                Rule::sequence_operator => term.push_str(" ~ "),
+                Rule::sequence_operator => {
+                    let joiner = format!("{0}~{0}", " ".repeat(self.pest_sequence_space));
+                    term.push_str(&joiner)
+                }
                 Rule::term => term.push_str(&self.format_term(pair)),
                 _ => unreachable!(),
             };
@@ -149,7 +161,8 @@ impl Settings {
                 Rule::range => code.push_str(pair.as_str()),
                 Rule::expression => {
                     let e = self.format_expression(pair);
-                    code.push_str(&e.join("|"))
+                    let joiner = format!("{0}|{0}", " ".repeat(self.pest_choice_space));
+                    code.push_str(&e.join(&joiner))
                 }
                 Rule::_push => code.push_str(&self.format_term(pair)),
                 Rule::repeat_min => code.push_str(&format_repeat_min_max(pair)),

@@ -8,9 +8,14 @@ impl Default for Settings {
         Settings {
             // tab = 4 space
             pest_indent: 4,
+            pest_set_alignment: true,
+            pest_blank_lines: None,
             pest_choice_first: true,
+            pest_choice_hanging: false,
+            pest_set_space: 1,
             pest_choice_space: 0,
             pest_braces_space: 0,
+            pest_sequence_space: 1,
             pest_parentheses_space: 0,
         }
     }
@@ -47,7 +52,14 @@ pub struct GrammarRule {
 
 impl GrammarRule {
     pub fn comment(c: &str) -> Self {
-        GrammarRule { is_comment: true, identifier: "".to_string(), modifier: "".to_string(), code: c.to_string(), lines: (0, 0) }
+        GrammarRule {
+            /// is_comment_or_blank_line
+            is_comment: true,
+            identifier: "".to_string(),
+            modifier: "".to_string(),
+            code: c.to_string(),
+            lines: (0, 0),
+        }
     }
     pub fn to_string(&self, indent: usize) -> String {
         if self.is_comment {
