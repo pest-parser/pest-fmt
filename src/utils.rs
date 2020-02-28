@@ -5,7 +5,22 @@ pub use textwrap::indent;
 
 impl Default for Settings {
     fn default() -> Self {
-        Settings { pest_indent: 4, pest_sequence_first: true }
+        Settings {
+            // tab = 4 space
+            pest_indent: 4,
+            pest_choice_first: true,
+            pest_choice_space: 0,
+            pest_braces_space: 0,
+            pest_parentheses_space: 0,
+        }
+    }
+}
+
+impl Settings {
+    pub fn style(s: &str) -> Settings {
+        match s {
+            _ => Settings::default(),
+        }
     }
 }
 

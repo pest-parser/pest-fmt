@@ -12,5 +12,5 @@ pest = "2.1.0"
 textwrap = "0.11"
 
 [dev-dependencies]
-pest_generator = "2.1.1"
+pest_generator = "2.1.2"
 quote = "1.0"

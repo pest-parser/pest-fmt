@@ -11,7 +11,10 @@ use std::{
 #[derive(Debug)]
 pub struct Settings {
     pub pest_indent: usize,
-    pub pest_sequence_first: bool,
+    pub pest_choice_first: bool,
+    pub pest_choice_space: usize,
+    pub pest_braces_space: usize,
+    pub pest_parentheses_space: usize,
 }
 
 impl Settings {
@@ -93,7 +96,7 @@ impl Settings {
                     if start == end {
                         code = format!("{{{}}}", s.join("|"));
                     }
-                    else if self.pest_sequence_first {
+                    else if self.pest_choice_first {
                         let space = std::iter::repeat(' ').take(self.pest_indent - 2).collect::<String>();
                         code = format!("{{\n  {}}}", indent(&s.join("\n| "), &space));
                     }

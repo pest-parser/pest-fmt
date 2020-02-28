@@ -5,40 +5,44 @@ use std::io::Error;
 
 #[test]
 fn pest_a() -> Result<(), Error> {
-    let set = Settings::default();
+    let cfg = Settings::default();
     let file = include_str!("pest.pest");
-    println!("{}", set.format(file));
-    set.format_file("tests/pest.pest", "tests/out/pest_a.pest")
+    println!("{}", cfg.format(file));
+    cfg.format_file("tests/pest.pest", "tests/out/pest_a.pest")
 }
 
 #[test]
 fn pest_b() -> Result<(), Error> {
-    let set = Settings { pest_indent: 2, pest_sequence_first: false };
+    let mut cfg = Settings::default();
+    cfg.pest_indent = 2;
+    cfg.pest_choice_first = false;
     let file = include_str!("pest.pest");
-    println!("{}", set.format(file));
-    set.format_file("tests/pest.pest", "tests/out/pest_b.pest")
+    println!("{}", cfg.format(file));
+    cfg.format_file("tests/pest.pest", "tests/out/pest_b.pest")
 }
 
 #[test]
 fn valkyrie_a() -> Result<(), Error> {
-    let set = Settings::default();
+    let cfg = Settings::default();
     let file = include_str!("valkyrie.pest");
-    println!("{}", set.format(file));
-    set.format_file("tests/valkyrie.pest", "tests/out/valkyrie_a.pest")
+    println!("{}", cfg.format(file));
+    cfg.format_file("tests/valkyrie.pest", "tests/out/valkyrie_a.pest")
 }
 
 #[test]
 fn valkyrie_b() -> Result<(), Error> {
-    let set = Settings { pest_indent: 2, pest_sequence_first: false };
+    let mut cfg = Settings::default();
+    cfg.pest_indent = 2;
+    cfg.pest_choice_first = false;
     let file = include_str!("valkyrie.pest");
-    println!("{}", set.format(file));
-    set.format_file("tests/valkyrie.pest", "tests/out/valkyrie_b.pest")
+    println!("{}", cfg.format(file));
+    cfg.format_file("tests/valkyrie.pest", "tests/out/valkyrie_b.pest")
 }
 
 #[test]
 fn arc_a() -> Result<(), Error> {
-    let set = Settings::default();
+    let cfg = Settings::default();
     let file = include_str!("arc.pest");
-    println!("{}", set.format(file));
-    set.format_file("tests/arc.pest", "tests/out/arc_a.pest")
+    println!("{}", cfg.format(file));
+    cfg.format_file("tests/arc.pest", "tests/out/arc_a.pest")
 }
