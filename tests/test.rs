@@ -14,8 +14,8 @@ fn pest_a() -> Result<(), Error> {
 #[test]
 fn pest_b() -> Result<(), Error> {
     let mut cfg = Settings::default();
-    cfg.pest_indent = 2;
-    cfg.pest_choice_first = false;
+    cfg.indent = 2;
+    cfg.choice_first = false;
     let file = include_str!("pest.pest");
     println!("{}", cfg.format(file));
     cfg.format_file("tests/pest.pest", "tests/out/pest_b.pest")
@@ -32,8 +32,8 @@ fn valkyrie_a() -> Result<(), Error> {
 #[test]
 fn valkyrie_b() -> Result<(), Error> {
     let mut cfg = Settings::default();
-    cfg.pest_indent = 2;
-    cfg.pest_choice_first = false;
+    cfg.indent = 2;
+    cfg.choice_first = false;
     let file = include_str!("valkyrie.pest");
     println!("{}", cfg.format(file));
     cfg.format_file("tests/valkyrie.pest", "tests/out/valkyrie_b.pest")

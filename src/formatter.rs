@@ -9,21 +9,21 @@ use std::{
 };
 
 pub struct Settings {
-    pub pest_indent: usize,
-    pub pest_choice_hanging: bool,
-    pub pest_choice_first: bool,
-    pub pest_set_alignment: bool,
-    pub pest_blank_lines: Option<usize>,
+    pub indent: usize,
+    pub choice_hanging: bool,
+    pub choice_first: bool,
+    pub set_alignment: bool,
+    pub blank_lines: Option<usize>,
     /// spaces between `=`
-    pub pest_set_space: usize,
+    pub set_space: usize,
     /// spaces between `|`
-    pub pest_choice_space: usize,
+    pub choice_space: usize,
     /// spaces between `{ }`
-    pub pest_braces_space: usize,
+    pub braces_space: usize,
     /// spaces between `~`
-    pub pest_sequence_space: usize,
+    pub sequence_space: usize,
     /// spaces between `( )`
-    pub pest_parentheses_space: usize,
+    pub parentheses_space: usize,
 }
 
 impl Settings {
@@ -105,12 +105,12 @@ impl Settings {
                     if start == end {
                         code = format!("{{{}}}", s.join("|"));
                     }
-                    else if self.pest_choice_first {
-                        let space = std::iter::repeat(' ').take(self.pest_indent - 2).collect::<String>();
+                    else if self.choice_first {
+                        let space = std::iter::repeat(' ').take(self.indent - 2).collect::<String>();
                         code = format!("{{\n  {}}}", indent(&s.join("\n| "), &space));
                     }
                     else {
-                        let space = std::iter::repeat(' ').take(self.pest_indent).collect::<String>();
+                        let space = std::iter::repeat(' ').take(self.indent).collect::<String>();
                         code = format!("{{\n{}}}", indent(&s.join(" |\n"), &space));
                     }
                 }
@@ -135,7 +135,7 @@ impl Settings {
                     term = String::new()
                 }
                 Rule::sequence_operator => {
-                    let joiner = format!("{0}~{0}", " ".repeat(self.pest_sequence_space));
+                    let joiner = format!("{0}~{0}", " ".repeat(self.sequence_space));
                     term.push_str(&joiner)
                 }
                 Rule::term => term.push_str(&self.format_term(pair)),
@@ -161,7 +161,7 @@ impl Settings {
                 Rule::range => code.push_str(pair.as_str()),
                 Rule::expression => {
                     let e = self.format_expression(pair);
-                    let joiner = format!("{0}|{0}", " ".repeat(self.pest_choice_space));
+                    let joiner = format!("{0}|{0}", " ".repeat(self.choice_space));
                     code.push_str(&e.join(&joiner))
                 }
                 Rule::_push => code.push_str(&self.format_term(pair)),
@@ -175,6 +175,7 @@ impl Settings {
     }
 }
 
+#[allow(dead_code)]
 fn format_repeat_exact(pairs: Pair<Rule>) -> String {
     let mut code = String::new();
     for pair in pairs.into_inner() {

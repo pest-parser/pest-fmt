@@ -7,16 +7,16 @@ impl Default for Settings {
     fn default() -> Self {
         Settings {
             // tab = 4 space
-            pest_indent: 4,
-            pest_set_alignment: true,
-            pest_blank_lines: None,
-            pest_choice_first: true,
-            pest_choice_hanging: false,
-            pest_set_space: 1,
-            pest_choice_space: 0,
-            pest_braces_space: 0,
-            pest_sequence_space: 1,
-            pest_parentheses_space: 0,
+            indent: 4,
+            set_alignment: true,
+            blank_lines: None,
+            choice_first: true,
+            choice_hanging: false,
+            set_space: 1,
+            choice_space: 0,
+            braces_space: 0,
+            sequence_space: 1,
+            parentheses_space: 0,
         }
     }
 }
