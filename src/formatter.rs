@@ -50,7 +50,7 @@ impl Settings {
                         }
                         Rule::grammar_rule => codes.push(self.format_grammar_rule(pair)),
                         Rule::WHITESPACE => continue,
-                        _ => unreachable!(),
+                        _ => continue,
                     };
                 }
                 let mut last = 0 as usize;
