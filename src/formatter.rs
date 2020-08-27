@@ -6,6 +6,7 @@ use pest::{iterators::Pair, Parser};
 use std::{
     fs::{read_to_string, File},
     io::Write,
+    panic,
 };
 
 pub struct Settings {
@@ -35,57 +36,60 @@ impl Settings {
         return Ok(());
     }
     pub fn format(&self, text: &str) -> String {
-        if let Ok(pairs) = PestParser::parse(Rule::grammar_rules, text) {
-            let mut code = String::new();
-            let mut codes = vec![];
-            for pair in pairs {
-                match pair.as_rule() {
-                    Rule::EOI => continue,
-                    Rule::COMMENT => {
-                        let start = pair.as_span().start_pos().line_col().0;
-                        let end = pair.as_span().end_pos().line_col().0;
-                        codes.push(GrammarRule { is_comment: true, identifier: String::new(), modifier: String::new(), code: pair.as_str().to_string(), lines: (start, end) })
+        let result = panic::catch_unwind(|| {
+            if let Ok(pairs) = PestParser::parse(Rule::grammar_rules, text) {
+                let mut code = String::new();
+                let mut codes = vec![];
+                for pair in pairs {
+                    match pair.as_rule() {
+                        Rule::EOI => continue,
+                        Rule::COMMENT => {
+                            let start = pair.as_span().start_pos().line_col().0;
+                            let end = pair.as_span().end_pos().line_col().0;
+                            codes.push(GrammarRule { is_comment: true, identifier: String::new(), modifier: String::new(), code: pair.as_str().to_string(), lines: (start, end) })
+                        }
+                        Rule::grammar_rule => codes.push(self.format_grammar_rule(pair)),
+                        Rule::WHITESPACE => continue,
+                        _ => unreachable!(),
+                    };
+                }
+                let mut last = 0 as usize;
+                let mut group = vec![];
+                let mut groups = vec![];
+                for i in codes {
+                    let (s, e) = i.lines;
+                    if last + 1 == s {
+                        group.push(i)
                     }
-                    Rule::grammar_rule => codes.push(self.format_grammar_rule(pair)),
-                    Rule::WHITESPACE => continue,
-                    _ => unreachable!(),
-                };
-            }
-            let mut last = 0 as usize;
-            let mut group = vec![];
-            let mut groups = vec![];
-            for i in codes {
-                let (s, e) = i.lines;
-                if last + 1 == s {
-                    group.push(i)
-                }
-                else {
-                    if group.len() != 0 {
-                        groups.push(group);
+                    else {
+                        if group.len() != 0 {
+                            groups.push(group);
+                        }
+                        group = vec![i]
                     }
-                    group = vec![i]
+                    last = e
                 }
-                last = e
-            }
-            groups.push(group);
-            for g in groups {
-                let mut length = vec![];
-                for r in &g {
-                    length.push(r.identifier.chars().count())
-                }
-                let max = length.iter().max().unwrap();
+                groups.push(group);
+                for g in groups {
+                    let mut length = vec![];
+                    for r in &g {
+                        length.push(r.identifier.chars().count())
+                    }
+                    let max = length.iter().max().unwrap();
 
-                for r in &g {
-                    code.push_str(&r.to_string(*max));
+                    for r in &g {
+                        code.push_str(&r.to_string(*max));
+                        code.push_str("\n");
+                    }
                     code.push_str("\n");
                 }
-                code.push_str("\n");
+                code.to_string()
             }
-            code
-        }
-        else {
-            String::new()
-        }
+            else {
+                String::new()
+            }
+        });
+        result.unwrap_or(String::new())
     }
     fn format_grammar_rule(&self, pairs: Pair<Rule>) -> GrammarRule {
         let mut code = String::new();
