@@ -126,7 +126,7 @@ impl Settings {
                     println!("Rule:    {:?}", pair.as_rule());
                     println!("Span:    {:?}", pair.as_span());
                     println!("Text:    {}\n", pair.as_str());
-                    unreachable!();
+                    continue;
                 }
             };
         }
@@ -147,7 +147,7 @@ impl Settings {
                     term.push_str(&joiner)
                 }
                 Rule::term => term.push_str(&self.format_term(pair)),
-                _ => unreachable!(),
+                _ => continue,
             };
         }
         code.push(term.clone());
@@ -176,7 +176,7 @@ impl Settings {
                 Rule::repeat_min => code.push_str(&format_repeat_min_max(pair)),
                 Rule::repeat_exact => code.push_str(&format_repeat_min_max(pair)),
                 Rule::repeat_min_max => code.push_str(&format_repeat_min_max(pair)),
-                _ => unreachable!(),
+                _ => continue,
             };
         }
         return code;
@@ -191,7 +191,7 @@ fn format_repeat_exact(pairs: Pair<Rule>) -> String {
             Rule::opening_brace => code.push_str(pair.as_str()),
             Rule::closing_brace => code.push_str(pair.as_str()),
             Rule::number => code.push_str(pair.as_str()),
-            _ => unreachable!(),
+            _ => continue,
         };
     }
     return code;
@@ -206,7 +206,7 @@ fn format_repeat_min_max(pairs: Pair<Rule>) -> String {
             Rule::closing_brace => code.push_str(pair.as_str()),
             Rule::comma => code.push_str(", "),
             Rule::number => code.push_str(pair.as_str()),
-            _ => unreachable!(),
+            _ => continue,
         };
     }
     return code;
