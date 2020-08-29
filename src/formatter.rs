@@ -8,6 +8,15 @@ use std::{
     io::Write,
 };
 
+macro_rules! debug_cases {
+    ($i:ident) => {{
+        println!("Rule::{:?}=>continue,", $i.as_rule());
+        println!("Span: {:?}", $i.as_span());
+        println!("Text: {}", $i.as_str());
+        unreachable!();
+    }};
+}
+
 pub struct Settings {
     pub indent: usize,
     pub choice_hanging: bool,
@@ -48,7 +57,7 @@ impl Settings {
                 }
                 Rule::grammar_rule => codes.push(self.format_grammar_rule(pair)),
                 Rule::WHITESPACE => continue,
-                _ => unreachable!(),
+                _ => debug_cases!(pair),
             };
         }
         let mut last = 0 as usize;
@@ -114,12 +123,7 @@ impl Settings {
                         code = format!("{{\n{}}}", indent(&s.join(" |\n"), &space));
                     }
                 }
-                _ => {
-                    println!("Rule:    {:?}", pair.as_rule());
-                    println!("Span:    {:?}", pair.as_span());
-                    println!("Text:    {}\n", pair.as_str());
-                    unreachable!();
-                }
+                _ => debug_cases!(pair),
             };
         }
         return GrammarRule { is_comment: false, identifier, modifier, code, lines: (start, end) };
@@ -139,7 +143,7 @@ impl Settings {
                     term.push_str(&joiner)
                 }
                 Rule::term => term.push_str(&self.format_term(pair)),
-                _ => unreachable!(),
+                _ => debug_cases!(pair),
             };
         }
         code.push(term.clone());
@@ -158,6 +162,16 @@ impl Settings {
                 Rule::closing_paren => code.push_str(pair.as_str()),
                 Rule::identifier => code.push_str(pair.as_str()),
                 Rule::string => code.push_str(pair.as_str()),
+                Rule::insensitive_string => {
+                    code.push('^');
+                    for inner in pair.into_inner() {
+                        match inner.as_rule() {
+                            Rule::WHITESPACE => continue,
+                            Rule::string => code.push_str(inner.as_str()),
+                            _ => unreachable!(),
+                        }
+                    }
+                }
                 Rule::range => code.push_str(pair.as_str()),
                 Rule::expression => {
                     let e = self.format_expression(pair);
@@ -168,7 +182,7 @@ impl Settings {
                 Rule::repeat_min => code.push_str(&format_repeat_min_max(pair)),
                 Rule::repeat_exact => code.push_str(&format_repeat_min_max(pair)),
                 Rule::repeat_min_max => code.push_str(&format_repeat_min_max(pair)),
-                _ => unreachable!(),
+                _ => debug_cases!(pair),
             };
         }
         return code;
