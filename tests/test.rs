@@ -12,6 +12,12 @@ fn basic() {
 }
 
 #[test]
+fn bad_cases() -> Result<(), Error> {
+    let cfg = Settings::default();
+    cfg.format_file("tests/bad_cases.pest", "tests/out/bad_cases.pest")
+}
+
+#[test]
 fn pest_a() -> Result<(), Error> {
     let cfg = Settings::default();
     cfg.format_file("tests/pest.pest", "tests/out/pest_a.pest")

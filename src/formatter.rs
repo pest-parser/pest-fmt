@@ -134,6 +134,7 @@ impl Settings {
         for pair in pairs.into_inner() {
             match pair.as_rule() {
                 Rule::WHITESPACE => continue,
+                Rule::COMMENT => code.push(self.format_comment(pair)),
                 Rule::choice_operator => {
                     code.push(term.clone());
                     term = String::new()
@@ -154,6 +155,7 @@ impl Settings {
         for pair in pairs.into_inner() {
             match pair.as_rule() {
                 Rule::WHITESPACE => continue,
+                Rule::COMMENT => code.push_str(&self.format_comment(pair)),
                 Rule::negative_predicate_operator => code.push_str(pair.as_str()),
                 Rule::repeat_once_operator => code.push_str(pair.as_str()),
                 Rule::optional_operator => code.push_str(pair.as_str()),
@@ -184,6 +186,21 @@ impl Settings {
                 Rule::repeat_min_max => code.push_str(&format_repeat_min_max(pair)),
                 _ => debug_cases!(pair),
             };
+        }
+        return code;
+    }
+
+    fn format_comment(&self, pairs: Pair<Rule>) -> String {
+        let mut code = String::new();
+        let raw = pairs.as_str();
+        if raw.starts_with("//") {
+            code.push_str("//");
+            code.push_str(raw[2..raw.len()].trim());
+            code.push('\n')
+        }
+        else {
+            // block comment
+            unimplemented!()
         }
         return code;
     }
