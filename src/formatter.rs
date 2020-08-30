@@ -1,18 +1,9 @@
-use crate::{grammar::{PestParser, Rule}, utils::{indent, GrammarRule}, PestResult};
+use crate::{grammar::{PestParser, Rule}, utils::{indent, GrammarRule}, PestResult, PestError};
 use pest::{iterators::Pair, Parser};
 use std::{
     fs::{read_to_string, File},
     io::Write,
 };
-
-macro_rules! debug_cases {
-    ($i:ident) => {{
-        println!("Rule::{:?}=>continue,", $i.as_rule());
-        println!("Span: {:?}", $i.as_span());
-        println!("Text: {}", $i.as_str());
-        unreachable!();
-    }};
-}
 
 pub struct Settings {
     pub indent: usize,
@@ -54,7 +45,7 @@ impl Settings {
                 }
                 Rule::grammar_rule => match self.format_grammar_rule(pair) {
                     Ok(rule) => codes.push(rule),
-                    Err(e) => return Err("unreachable"),
+                    Err(e) => return Err(e),
                 },
                 Rule::WHITESPACE => continue,
                 _ => return Err("unreachable"),
@@ -92,7 +83,7 @@ impl Settings {
         }
         return Ok(code);
     }
-    fn format_grammar_rule(&self, pairs: Pair<Rule>) -> Result<GrammarRule, &str> {
+    fn format_grammar_rule(&self, pairs: Pair<Rule>) -> PestResult<GrammarRule> {
         let mut code = String::new();
         let mut modifier = " ".to_string();
         let mut identifier = String::new();
@@ -123,19 +114,14 @@ impl Settings {
                             code = format!("{{\n{}}}", indent(&s.join(" |\n"), &space));
                         }
                     }
-                    Err(_) => return Err("unreachable"),
+                    Err(_) => return Err(PestError::Unreachable),
                 },
-                _ => {
-                    println!("Rule:    {:?}", pair.as_rule());
-                    println!("Span:    {:?}", pair.as_span());
-                    println!("Text:    {}\n", pair.as_str());
-                    return Err("unreachable");
-                }
+                _ => (),
             };
         }
         return Ok(GrammarRule { is_comment: false, identifier, modifier, code, lines: (start, end) });
     }
-    fn format_expression(&self, pairs: Pair<Rule>) -> Result<Vec<String>, &str> {
+    fn format_expression(&self, pairs: Pair<Rule>) -> PestResult<Vec<String>> {
         let mut code = vec![];
         let mut term = String::new();
         for pair in pairs.into_inner() {
@@ -152,10 +138,10 @@ impl Settings {
                 }
                 Rule::term => match self.format_term(pair) {
                     Ok(string) => term.push_str(&string),
-                    Err(_) => return Err("unreachable"),
+                    Err(_) => return Err(PestError::Unreachable),
                 },
 
-                _ => return Err("unreachable"),
+                _ => return Err(PestError::Unreachable),
             };
         }
         code.push(term.clone());

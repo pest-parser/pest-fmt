@@ -10,18 +10,14 @@ pub enum PestError {
 
 pub type PestResult<T> = Result<T, PestError>;
 
-
-
-impl std::convert::From<std::io::Error> for PestError{
+impl std::convert::From<std::io::Error> for PestError {
     fn from(_: Error) -> Self {
         PestError::IOError
     }
 }
 
-impl std::convert::From<&str> for PestError{
+impl std::convert::From<&str> for PestError {
     fn from(s: &str) -> Self {
-        PestError:: ParseFail(String::from(s))
+        PestError::ParseFail(String::from(s))
     }
 }
-
-
