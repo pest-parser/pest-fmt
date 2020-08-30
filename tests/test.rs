@@ -1,6 +1,6 @@
 extern crate pest_fmt;
 
-use pest_fmt::Settings;
+use pest_fmt::{Settings, PestResult};
 use std::io::Error;
 
 #[test]
@@ -12,19 +12,19 @@ fn basic() {
 }
 
 #[test]
-fn bad_cases() -> Result<(), Error> {
+fn bad_cases() -> PestResult<()> {
     let cfg = Settings::default();
     cfg.format_file("tests/bad_cases.pest", "tests/out/bad_cases.pest")
 }
 
 #[test]
-fn pest_a() -> Result<(), Error> {
+fn pest_a() -> PestResult<()> {
     let cfg = Settings::default();
     cfg.format_file("tests/pest.pest", "tests/out/pest_a.pest")
 }
 
 #[test]
-fn pest_b() -> Result<(), Error> {
+fn pest_b() -> PestResult<()> {
     let mut cfg = Settings::default();
     cfg.indent = 2;
     cfg.choice_first = false;
@@ -32,13 +32,13 @@ fn pest_b() -> Result<(), Error> {
 }
 
 #[test]
-fn valkyrie_a() -> Result<(), Error> {
+fn valkyrie_a() -> PestResult<()> {
     let cfg = Settings::default();
     cfg.format_file("tests/valkyrie.pest", "tests/out/valkyrie_a.pest")
 }
 
 #[test]
-fn valkyrie_b() -> Result<(), Error> {
+fn valkyrie_b() -> PestResult<()> {
     let mut cfg = Settings::default();
     cfg.indent = 2;
     cfg.choice_first = false;
@@ -46,7 +46,7 @@ fn valkyrie_b() -> Result<(), Error> {
 }
 
 #[test]
-fn arc_a() -> Result<(), Error> {
+fn arc_a() -> PestResult<()> {
     let cfg = Settings::default();
     cfg.format_file("tests/arc.pest", "tests/out/arc_a.pest")
 }
