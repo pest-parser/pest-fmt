@@ -1,7 +1,4 @@
-use crate::{
-    grammar::{PestParser, Rule},
-    utils::{indent, GrammarRule},
-};
+use crate::{grammar::{PestParser, Rule}, utils::{indent, GrammarRule}, PestResult};
 use pest::{iterators::Pair, Parser};
 use std::{
     fs::{read_to_string, File},
@@ -36,17 +33,12 @@ pub struct Settings {
 }
 
 impl Settings {
-    pub fn format_file(&self, path_from: &str, path_to: &str) -> Result<(), std::io::Error> {
+    pub fn format_file(&self, path_from: &str, path_to: &str) -> PestResult<()> {
         let r = read_to_string(path_from)?;
-        let s = self.format(&r);
+        let s = self.format(&r)?;
         let mut file = File::create(path_to)?;
-        match s {
-            Ok(s) => {
-                file.write_all(s.as_bytes())?;
-                return Ok(());
-            }
-            Err(_) => return Ok(()),
-        }
+        file.write_all(s.as_bytes())?;
+        Ok(())
     }
     pub fn format(&self, text: &str) -> Result<String, &str> {
         let pairs = PestParser::parse(Rule::grammar_rules, text).unwrap_or_else(|e| panic!("{}", e));
