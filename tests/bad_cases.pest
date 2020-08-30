@@ -1,0 +1,6 @@
+params = {"something"}
+arguments = { "(" ~ (params //  bad comment
+~ ("," ~ params )* // bad comment
+//comment dont know if this was a problem.
+~ ","?)? ~ ")"
+}

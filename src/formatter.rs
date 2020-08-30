@@ -8,6 +8,15 @@ use std::{
     io::Write,
 };
 
+macro_rules! debug_cases {
+    ($i:ident) => {{
+        println!("Rule::{:?}=>continue,", $i.as_rule());
+        println!("Span: {:?}", $i.as_span());
+        println!("Text: {}", $i.as_str());
+        unreachable!();
+    }};
+}
+
 pub struct Settings {
     pub indent: usize,
     pub choice_hanging: bool,
@@ -140,6 +149,7 @@ impl Settings {
         for pair in pairs.into_inner() {
             match pair.as_rule() {
                 Rule::WHITESPACE => continue,
+                Rule::COMMENT => code.push(self.format_comment(pair)),
                 Rule::choice_operator => {
                     code.push(term.clone());
                     term = String::new()
@@ -165,6 +175,7 @@ impl Settings {
         for pair in pairs.into_inner() {
             match pair.as_rule() {
                 Rule::WHITESPACE => continue,
+                Rule::COMMENT => code.push_str(&self.format_comment(pair)),
                 Rule::negative_predicate_operator => code.push_str(pair.as_str()),
                 Rule::repeat_once_operator => code.push_str(pair.as_str()),
                 Rule::optional_operator => code.push_str(pair.as_str()),
@@ -173,6 +184,16 @@ impl Settings {
                 Rule::closing_paren => code.push_str(pair.as_str()),
                 Rule::identifier => code.push_str(pair.as_str()),
                 Rule::string => code.push_str(pair.as_str()),
+                Rule::insensitive_string => {
+                    code.push('^');
+                    for inner in pair.into_inner() {
+                        match inner.as_rule() {
+                            Rule::WHITESPACE => continue,
+                            Rule::string => code.push_str(inner.as_str()),
+                            _ => unreachable!(),
+                        }
+                    }
+                }
                 Rule::range => code.push_str(pair.as_str()),
                 Rule::expression => {
                     let e = self.format_expression(pair);
@@ -195,6 +216,21 @@ impl Settings {
             };
         }
         return Ok(code);
+    }
+
+    fn format_comment(&self, pairs: Pair<Rule>) -> String {
+        let mut code = String::new();
+        let raw = pairs.as_str();
+        if raw.starts_with("//") {
+            code.push_str("//");
+            code.push_str(raw[2..raw.len()].trim());
+            code.push('\n')
+        }
+        else {
+            // block comment
+            unimplemented!()
+        }
+        return code;
     }
 }
 
