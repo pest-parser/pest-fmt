@@ -31,7 +31,7 @@ impl Settings {
         file.write_all(s.as_bytes())?;
         Ok(())
     }
-    pub fn format(&self, text: &str) -> Result<String, &str> {
+    pub fn format(&self, text: &str) -> PestResult<String> {
         let pairs = PestParser::parse(Rule::grammar_rules, text).unwrap_or_else(|e| panic!("{}", e));
         let mut code = String::new();
         let mut codes = vec![];
@@ -48,7 +48,7 @@ impl Settings {
                     Err(e) => return Err(e),
                 },
                 Rule::WHITESPACE => continue,
-                _ => return Err("unreachable"),
+                _ => return Err(PestError::Unreachable),
             };
         }
         let mut last = 0 as usize;
@@ -148,7 +148,7 @@ impl Settings {
         return Ok(code);
     }
 
-    fn format_term(&self, pairs: Pair<Rule>) -> Result<String, &str> {
+    fn format_term(&self, pairs: Pair<Rule>) -> PestResult<String> {
         let mut code = String::new();
         for pair in pairs.into_inner() {
             match pair.as_rule() {
@@ -180,17 +180,17 @@ impl Settings {
                             let joiner = format!("{0}|{0}", " ".repeat(self.choice_space));
                             code.push_str(&expression.join(&joiner))
                         }
-                        Err(_) => return Err("unreachable"),
+                        Err(_) => return Err(PestError::Unreachable),
                     }
                 }
                 Rule::_push => match &self.format_term(pair) {
                     Ok(string) => code.push_str(&string),
-                    Err(_) => return Err("unreachable"),
+                    Err(_) => return Err(PestError::Unreachable),
                 },
                 Rule::repeat_min => code.push_str(&format_repeat_min_max(pair)),
                 Rule::repeat_exact => code.push_str(&format_repeat_min_max(pair)),
                 Rule::repeat_min_max => code.push_str(&format_repeat_min_max(pair)),
-                _ => return Err("unreachable!"),
+                _ => return Err(PestError::Unreachable),
             };
         }
         return Ok(code);

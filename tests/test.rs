@@ -1,7 +1,6 @@
 extern crate pest_fmt;
 
 use pest_fmt::{PestResult, Settings};
-use std::io::Error;
 
 #[test]
 fn basic() {
