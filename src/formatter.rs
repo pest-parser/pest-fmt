@@ -53,7 +53,7 @@ impl Settings {
                 }
                 Rule::grammar_rule => match self.format_grammar_rule(pair) {
                     Ok(rule) => codes.push(rule),
-                    Err(e) => return Err("e"),
+                    Err(e) => return Err("unreachable"),
                 },
                 Rule::WHITESPACE => continue,
                 _ => return Err("unreachable"),
