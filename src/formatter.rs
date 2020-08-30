@@ -108,25 +108,22 @@ impl Settings {
                 Rule::atomic_modifier => modifier = pair.as_str().to_string(),
                 Rule::non_atomic_modifier => modifier = pair.as_str().to_string(),
                 Rule::compound_atomic_modifier => modifier = pair.as_str().to_string(),
-                Rule::expression => {
-                    let s = self.format_expression(pair);
-                    match s {
-                        Ok(s) => {
-                            if start == end {
-                                code = format!("{{{}}}", s.join("|"));
-                            }
-                            else if self.choice_first {
-                                let space = std::iter::repeat(' ').take(self.indent - 2).collect::<String>();
-                                code = format!("{{\n  {}}}", indent(&s.join("\n| "), &space));
-                            }
-                            else {
-                                let space = std::iter::repeat(' ').take(self.indent).collect::<String>();
-                                code = format!("{{\n{}}}", indent(&s.join(" |\n"), &space));
-                            }
+                Rule::expression => match self.format_expression(pair) {
+                    Ok(s) => {
+                        if start == end {
+                            code = format!("{{{}}}", s.join("|"));
                         }
-                        Err(_) => return Err("unreachable"),
+                        else if self.choice_first {
+                            let space = std::iter::repeat(' ').take(self.indent - 2).collect::<String>();
+                            code = format!("{{\n  {}}}", indent(&s.join("\n| "), &space));
+                        }
+                        else {
+                            let space = std::iter::repeat(' ').take(self.indent).collect::<String>();
+                            code = format!("{{\n{}}}", indent(&s.join(" |\n"), &space));
+                        }
                     }
-                }
+                    Err(_) => return Err("unreachable"),
+                },
                 _ => {
                     println!("Rule:    {:?}", pair.as_rule());
                     println!("Span:    {:?}", pair.as_span());
