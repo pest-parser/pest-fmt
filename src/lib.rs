@@ -13,5 +13,7 @@ mod pre_build;
 pub mod formatter;
 pub mod grammar;
 pub mod utils;
+ mod error;
 
 pub use formatter::Settings;
+pub use error::{PestError,PestResult};
