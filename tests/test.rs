@@ -8,7 +8,7 @@ fn basic() {
     let cfg = Settings::default();
     const INPUT: &str = r#"exponent_part = _{ ^  "e" ~ ("+" | "-")? ~ ASCII_DIGIT+ }"#;
     const OUTPUT: &str = r#"exponent_part = _{^"e" ~ ("+"|"-")? ~ ASCII_DIGIT+}"#;
-    assert_eq!(cfg.format(INPUT).trim_end(), OUTPUT)
+    assert_eq!(cfg.format(INPUT).unwrap().trim_end(), OUTPUT)
 }
 
 #[test]
