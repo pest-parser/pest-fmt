@@ -10,10 +10,10 @@ extern crate proc_macro;
 #[cfg(test)]
 mod pre_build;
 
+mod error;
 pub mod formatter;
 pub mod grammar;
 pub mod utils;
- mod error;
 
+pub use error::{PestError, PestResult};
 pub use formatter::Settings;
-pub use error::{PestError,PestResult};

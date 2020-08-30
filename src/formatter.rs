@@ -1,21 +1,13 @@
 use crate::{
     grammar::{PestParser, Rule},
     utils::{indent, GrammarRule},
+    PestError, PestResult,
 };
 use pest::{iterators::Pair, Parser};
 use std::{
     fs::{read_to_string, File},
     io::Write,
 };
-
-macro_rules! debug_cases {
-    ($i:ident) => {{
-        println!("Rule::{:?}=>continue,", $i.as_rule());
-        println!("Span: {:?}", $i.as_span());
-        println!("Text: {}", $i.as_str());
-        unreachable!();
-    }};
-}
 
 pub struct Settings {
     pub indent: usize,
@@ -36,19 +28,14 @@ pub struct Settings {
 }
 
 impl Settings {
-    pub fn format_file(&self, path_from: &str, path_to: &str) -> Result<(), std::io::Error> {
+    pub fn format_file(&self, path_from: &str, path_to: &str) -> PestResult<()> {
         let r = read_to_string(path_from)?;
-        let s = self.format(&r);
+        let s = self.format(&r)?;
         let mut file = File::create(path_to)?;
-        match s {
-            Ok(s) => {
-                file.write_all(s.as_bytes())?;
-                return Ok(());
-            }
-            Err(_) => return Ok(()),
-        }
+        file.write_all(s.as_bytes())?;
+        Ok(())
     }
-    pub fn format(&self, text: &str) -> Result<String, &str> {
+    pub fn format(&self, text: &str) -> PestResult<String> {
         let pairs = PestParser::parse(Rule::grammar_rules, text).unwrap_or_else(|e| panic!("{}", e));
         let mut code = String::new();
         let mut codes = vec![];
@@ -62,10 +49,10 @@ impl Settings {
                 }
                 Rule::grammar_rule => match self.format_grammar_rule(pair) {
                     Ok(rule) => codes.push(rule),
-                    Err(e) => return Err("unreachable"),
+                    Err(e) => return Err(e),
                 },
                 Rule::WHITESPACE => continue,
-                _ => return Err("unreachable"),
+                _ => return Err(PestError::Unreachable),
             };
         }
         let mut last = 0 as usize;
@@ -100,7 +87,7 @@ impl Settings {
         }
         return Ok(code);
     }
-    fn format_grammar_rule(&self, pairs: Pair<Rule>) -> Result<GrammarRule, &str> {
+    fn format_grammar_rule(&self, pairs: Pair<Rule>) -> PestResult<GrammarRule> {
         let mut code = String::new();
         let mut modifier = " ".to_string();
         let mut identifier = String::new();
@@ -131,25 +118,20 @@ impl Settings {
                             code = format!("{{\n{}}}", indent(&s.join(" |\n"), &space));
                         }
                     }
-                    Err(_) => return Err("unreachable"),
+                    Err(_) => return Err(PestError::Unreachable),
                 },
-                _ => {
-                    println!("Rule:    {:?}", pair.as_rule());
-                    println!("Span:    {:?}", pair.as_span());
-                    println!("Text:    {}\n", pair.as_str());
-                    return Err("unreachable");
-                }
+                _ => (),
             };
         }
         return Ok(GrammarRule { is_comment: false, identifier, modifier, code, lines: (start, end) });
     }
-    fn format_expression(&self, pairs: Pair<Rule>) -> Result<Vec<String>, &str> {
+    fn format_expression(&self, pairs: Pair<Rule>) -> PestResult<Vec<String>> {
         let mut code = vec![];
         let mut term = String::new();
         for pair in pairs.into_inner() {
             match pair.as_rule() {
                 Rule::WHITESPACE => continue,
-                Rule::COMMENT => code.push(self.format_comment(pair)),
+                Rule::COMMENT => code.push(format_comment(pair)),
                 Rule::choice_operator => {
                     code.push(term.clone());
                     term = String::new()
@@ -160,22 +142,22 @@ impl Settings {
                 }
                 Rule::term => match self.format_term(pair) {
                     Ok(string) => term.push_str(&string),
-                    Err(_) => return Err("unreachable"),
+                    Err(_) => return Err(PestError::Unreachable),
                 },
 
-                _ => return Err("unreachable"),
+                _ => return Err(PestError::Unreachable),
             };
         }
         code.push(term.clone());
         return Ok(code);
     }
 
-    fn format_term(&self, pairs: Pair<Rule>) -> Result<String, &str> {
+    fn format_term(&self, pairs: Pair<Rule>) -> PestResult<String> {
         let mut code = String::new();
         for pair in pairs.into_inner() {
             match pair.as_rule() {
                 Rule::WHITESPACE => continue,
-                Rule::COMMENT => code.push_str(&self.format_comment(pair)),
+                Rule::COMMENT => code.push_str(&format_comment(pair)),
                 Rule::negative_predicate_operator => code.push_str(pair.as_str()),
                 Rule::repeat_once_operator => code.push_str(pair.as_str()),
                 Rule::optional_operator => code.push_str(pair.as_str()),
@@ -202,36 +184,36 @@ impl Settings {
                             let joiner = format!("{0}|{0}", " ".repeat(self.choice_space));
                             code.push_str(&expression.join(&joiner))
                         }
-                        Err(_) => return Err("unreachable"),
+                        Err(_) => return Err(PestError::Unreachable),
                     }
                 }
                 Rule::_push => match &self.format_term(pair) {
                     Ok(string) => code.push_str(&string),
-                    Err(_) => return Err("unreachable"),
+                    Err(_) => return Err(PestError::Unreachable),
                 },
                 Rule::repeat_min => code.push_str(&format_repeat_min_max(pair)),
                 Rule::repeat_exact => code.push_str(&format_repeat_min_max(pair)),
                 Rule::repeat_min_max => code.push_str(&format_repeat_min_max(pair)),
-                _ => return Err("unreachable!"),
+                _ => return Err(PestError::Unreachable),
             };
         }
         return Ok(code);
     }
+}
 
-    fn format_comment(&self, pairs: Pair<Rule>) -> String {
-        let mut code = String::new();
-        let raw = pairs.as_str();
-        if raw.starts_with("//") {
-            code.push_str("//");
-            code.push_str(raw[2..raw.len()].trim());
-            code.push('\n')
-        }
-        else {
-            // block comment
-            unimplemented!()
-        }
-        return code;
+fn format_comment(pairs: Pair<Rule>) -> String {
+    let mut code = String::new();
+    let raw = pairs.as_str();
+    if raw.starts_with("//") {
+        code.push_str("//");
+        code.push_str(raw[2..raw.len()].trim());
+        code.push('\n')
     }
+    else {
+        // block comment
+        unimplemented!()
+    }
+    return code;
 }
 
 #[allow(dead_code)]
