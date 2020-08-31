@@ -36,7 +36,10 @@ impl Settings {
         Ok(())
     }
     pub fn format(&self, text: &str) -> PestResult<String> {
-        let pairs = PestParser::parse(Rule::grammar_rules, text).unwrap_or_else(|e| panic!("{}", e));
+        let pairs = match PestParser::parse(Rule::grammar_rules, text) {
+            Ok(pairs) => pairs,
+            Err(e) => return Err(PestError::ParseFail(e.to_string())),
+        };
         let mut code = String::new();
         let mut codes = vec![];
         for pair in pairs {
