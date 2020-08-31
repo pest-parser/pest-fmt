@@ -172,7 +172,7 @@ impl Settings {
                         match inner.as_rule() {
                             Rule::WHITESPACE => continue,
                             Rule::string => code.push_str(inner.as_str()),
-                            _ => unreachable!(),
+                            _ => return Err(PestError::Unreachable),
                         }
                     }
                 }
