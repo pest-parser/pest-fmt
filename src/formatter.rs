@@ -211,6 +211,7 @@ fn format_comment(pairs: Pair<Rule>) -> String {
     }
     else {
         // block comment
+        unimplemented!()
     }
     return code;
 }
@@ -238,7 +239,7 @@ fn format_repeat_min_max(pairs: Pair<Rule>) -> PestResult<String> {
             Rule::closing_brace => code.push_str(pair.as_str()),
             Rule::comma => code.push_str(", "),
             Rule::number => code.push_str(pair.as_str()),
-            _ => Err(PestError::Unreachable),
+            _ => return Err(PestError::Unreachable),
         };
     }
     return Ok(code);
