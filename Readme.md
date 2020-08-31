@@ -1,6 +1,7 @@
 Pest Formatter
 ==============
 
+Try Online: [PlayGround](https://sbeckeriv.github.io/pest_format/)
 
 
 ### Configs
@@ -11,11 +12,11 @@ Pest Formatter
 
 ```pest
 rule = {
-	token1
+    token1
   | token2
 }
 rule2 = {
-	token1 |
+    token1 |
     token2
 }
 ```
@@ -52,7 +53,7 @@ token2
 
 ```pest
 rule = {
-	token1
+    token1
   | token2
 }
 ```
@@ -61,7 +62,7 @@ rule = {
 
 ```pest
 rule = {
-	token1 |
+    token1 |
     token2
 }
 ```
