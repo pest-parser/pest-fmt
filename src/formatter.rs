@@ -36,7 +36,10 @@ impl Settings {
         Ok(())
     }
     pub fn format(&self, text: &str) -> PestResult<String> {
-        let pairs = PestParser::parse(Rule::grammar_rules, text).unwrap_or_else(|e| panic!("{}", e));
+        let pairs = match PestParser::parse(Rule::grammar_rules, text) {
+            Ok(pairs) => pairs,
+            Err(e) => return Err(PestError::ParseFail(e.to_string())),
+        };
         let mut code = String::new();
         let mut codes = vec![];
         for pair in pairs {
@@ -172,7 +175,7 @@ impl Settings {
                         match inner.as_rule() {
                             Rule::WHITESPACE => continue,
                             Rule::string => code.push_str(inner.as_str()),
-                            _ => unreachable!(),
+                            _ => return Err(PestError::Unreachable),
                         }
                     }
                 }
@@ -191,9 +194,9 @@ impl Settings {
                     Ok(string) => code.push_str(&string),
                     Err(_) => return Err(PestError::Unreachable),
                 },
-                Rule::repeat_min => code.push_str(&format_repeat_min_max(pair)),
-                Rule::repeat_exact => code.push_str(&format_repeat_min_max(pair)),
-                Rule::repeat_min_max => code.push_str(&format_repeat_min_max(pair)),
+                Rule::repeat_min => code.push_str(&format_repeat_min_max(pair)?),
+                Rule::repeat_exact => code.push_str(&format_repeat_min_max(pair)?),
+                Rule::repeat_min_max => code.push_str(&format_repeat_min_max(pair)?),
                 _ => return Err(PestError::Unreachable),
             };
         }
@@ -230,7 +233,7 @@ fn format_repeat_exact(pairs: Pair<Rule>) -> String {
     return code;
 }
 
-fn format_repeat_min_max(pairs: Pair<Rule>) -> String {
+fn format_repeat_min_max(pairs: Pair<Rule>) -> PestResult<String> {
     let mut code = String::new();
     for pair in pairs.into_inner() {
         match pair.as_rule() {
@@ -239,8 +242,8 @@ fn format_repeat_min_max(pairs: Pair<Rule>) -> String {
             Rule::closing_brace => code.push_str(pair.as_str()),
             Rule::comma => code.push_str(", "),
             Rule::number => code.push_str(pair.as_str()),
-            _ => unreachable!(),
+            _ => return Err(PestError::Unreachable),
         };
     }
-    return code;
+    return Ok(code);
 }
