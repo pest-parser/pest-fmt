@@ -191,9 +191,9 @@ impl Settings {
                     Ok(string) => code.push_str(&string),
                     Err(_) => return Err(PestError::Unreachable),
                 },
-                Rule::repeat_min => code.push_str(&format_repeat_min_max(pair)),
-                Rule::repeat_exact => code.push_str(&format_repeat_min_max(pair)),
-                Rule::repeat_min_max => code.push_str(&format_repeat_min_max(pair)),
+                Rule::repeat_min => code.push_str(&format_repeat_min_max(pair)?),
+                Rule::repeat_exact => code.push_str(&format_repeat_min_max(pair)?),
+                Rule::repeat_min_max => code.push_str(&format_repeat_min_max(pair)?),
                 _ => return Err(PestError::Unreachable),
             };
         }
@@ -211,7 +211,6 @@ fn format_comment(pairs: Pair<Rule>) -> String {
     }
     else {
         // block comment
-        unimplemented!()
     }
     return code;
 }
@@ -230,7 +229,7 @@ fn format_repeat_exact(pairs: Pair<Rule>) -> String {
     return code;
 }
 
-fn format_repeat_min_max(pairs: Pair<Rule>) -> String {
+fn format_repeat_min_max(pairs: Pair<Rule>) -> PestResult<String> {
     let mut code = String::new();
     for pair in pairs.into_inner() {
         match pair.as_rule() {
@@ -239,8 +238,8 @@ fn format_repeat_min_max(pairs: Pair<Rule>) -> String {
             Rule::closing_brace => code.push_str(pair.as_str()),
             Rule::comma => code.push_str(", "),
             Rule::number => code.push_str(pair.as_str()),
-            _ => unreachable!(),
+            _ => Err(PestError::Unreachable),
         };
     }
-    return code;
+    return Ok(code);
 }
