@@ -1,7 +1,6 @@
 use crate::Settings;
 use pest::Span;
 use std::fmt::{Debug, Error, Formatter};
-pub use textwrap::indent;
 
 impl Default for Settings {
     fn default() -> Self {

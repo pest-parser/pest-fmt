@@ -1,31 +1,15 @@
 use crate::{
+    error::PestError::Unreachable,
     grammar::{PestParser, Rule},
-    utils::{indent, GrammarRule},
-    PestError, PestResult,
+    utils::GrammarRule,
+    PestError, PestResult, Settings,
 };
 use pest::{iterators::Pair, Parser};
 use std::{
     fs::{read_to_string, File},
     io::Write,
 };
-
-pub struct Settings {
-    pub indent: usize,
-    pub choice_hanging: bool,
-    pub choice_first: bool,
-    pub set_alignment: bool,
-    pub blank_lines: Option<usize>,
-    /// spaces between `=`
-    pub set_space: usize,
-    /// spaces between `|`
-    pub choice_space: usize,
-    /// spaces between `{ }`
-    pub braces_space: usize,
-    /// spaces between `~`
-    pub sequence_space: usize,
-    /// spaces between `( )`
-    pub parentheses_space: usize,
-}
+use text_utils::indent_with;
 
 impl Settings {
     pub fn format_file(&self, path_from: &str, path_to: &str) -> PestResult<()> {
@@ -55,7 +39,7 @@ impl Settings {
                     Err(e) => return Err(e),
                 },
                 Rule::WHITESPACE => continue,
-                _ => return Err(PestError::Unreachable),
+                _ => return Err(Unreachable(unreachable_rule!())),
             };
         }
         let mut last = 0 as usize;
@@ -114,14 +98,14 @@ impl Settings {
                         }
                         else if self.choice_first {
                             let space = std::iter::repeat(' ').take(self.indent - 2).collect::<String>();
-                            code = format!("{{\n  {}}}", indent(&s.join("\n| "), &space));
+                            code = format!("{{\n  {}}}", indent_with(&s.join("\n| "), &space));
                         }
                         else {
                             let space = std::iter::repeat(' ').take(self.indent).collect::<String>();
-                            code = format!("{{\n{}}}", indent(&s.join(" |\n"), &space));
+                            code = format!("{{\n{}}}", indent_with(&s.join(" |\n"), &space));
                         }
                     }
-                    Err(_) => return Err(PestError::Unreachable),
+                    Err(e) => return Err(e),
                 },
                 _ => (),
             };
@@ -145,10 +129,10 @@ impl Settings {
                 }
                 Rule::term => match self.format_term(pair) {
                     Ok(string) => term.push_str(&string),
-                    Err(_) => return Err(PestError::Unreachable),
+                    Err(e) => return Err(e),
                 },
 
-                _ => return Err(PestError::Unreachable),
+                _ => return Err(Unreachable(unreachable_rule!())),
             };
         }
         code.push(term.clone());
@@ -175,7 +159,7 @@ impl Settings {
                         match inner.as_rule() {
                             Rule::WHITESPACE => continue,
                             Rule::string => code.push_str(inner.as_str()),
-                            _ => return Err(PestError::Unreachable),
+                            _ => return Err(Unreachable(unreachable_rule!())),
                         }
                     }
                 }
@@ -187,17 +171,17 @@ impl Settings {
                             let joiner = format!("{0}|{0}", " ".repeat(self.choice_space));
                             code.push_str(&expression.join(&joiner))
                         }
-                        Err(_) => return Err(PestError::Unreachable),
+                        Err(e) => return Err(e),
                     }
                 }
-                Rule::_push => match &self.format_term(pair) {
+                Rule::_push => match self.format_term(pair) {
                     Ok(string) => code.push_str(&string),
-                    Err(_) => return Err(PestError::Unreachable),
+                    Err(e) => return Err(e),
                 },
                 Rule::repeat_min => code.push_str(&format_repeat_min_max(pair)?),
                 Rule::repeat_exact => code.push_str(&format_repeat_min_max(pair)?),
                 Rule::repeat_min_max => code.push_str(&format_repeat_min_max(pair)?),
-                _ => return Err(PestError::Unreachable),
+                _ => return Err(Unreachable(unreachable_rule!())),
             };
         }
         return Ok(code);
@@ -242,7 +226,7 @@ fn format_repeat_min_max(pairs: Pair<Rule>) -> PestResult<String> {
             Rule::closing_brace => code.push_str(pair.as_str()),
             Rule::comma => code.push_str(", "),
             Rule::number => code.push_str(pair.as_str()),
-            _ => return Err(PestError::Unreachable),
+            _ => return Err(Unreachable(unreachable_rule!())),
         };
     }
     return Ok(code);
