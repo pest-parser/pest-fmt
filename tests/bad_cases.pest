@@ -4,3 +4,8 @@ arguments = { "(" ~ (params //  bad comment
 //comment dont know if this was a problem.
 ~ ","?)? ~ ")"
 }
+
+
+blah = {
+("w") ~ &("z")
+}

@@ -1,8 +1,8 @@
-use std::io::Error;
+use std::io;
 
 #[derive(Debug, Clone)]
 pub enum PestError {
-    IOError,
+    IOError(String),
     Unreachable(String),
     ParseFail(String),
     FormatFail(String),
@@ -10,13 +10,13 @@ pub enum PestError {
 
 pub type PestResult<T> = Result<T, PestError>;
 
-impl std::convert::From<std::io::Error> for PestError {
-    fn from(_: Error) -> Self {
-        PestError::IOError
+impl From<io::Error> for PestError {
+    fn from(e: io::Error) -> Self {
+        PestError::IOError(e.to_string())
     }
 }
 
-impl std::convert::From<&str> for PestError {
+impl From<&str> for PestError {
     fn from(s: &str) -> Self {
         PestError::ParseFail(String::from(s))
     }

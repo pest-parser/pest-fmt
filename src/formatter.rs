@@ -9,7 +9,7 @@ use std::{
     fs::{read_to_string, File},
     io::Write,
 };
-use text_utils::indent_with;
+use text_utils::indent;
 
 impl Settings {
     pub fn format_file(&self, path_from: &str, path_to: &str) -> PestResult<()> {
@@ -97,12 +97,10 @@ impl Settings {
                             code = format!("{{{}}}", s.join("|"));
                         }
                         else if self.choice_first {
-                            let space = std::iter::repeat(' ').take(self.indent - 2).collect::<String>();
-                            code = format!("{{\n  {}}}", indent_with(&s.join("\n| "), &space));
+                            code = format!("{{\n  {}}}", indent(&s.join("\n| "), self.indent - 2));
                         }
                         else {
-                            let space = std::iter::repeat(' ').take(self.indent).collect::<String>();
-                            code = format!("{{\n{}}}", indent_with(&s.join(" |\n"), &space));
+                            code = format!("{{\n{}}}", indent(&s.join(" |\n"), self.indent));
                         }
                     }
                     Err(e) => return Err(e),
@@ -131,7 +129,6 @@ impl Settings {
                     Ok(string) => term.push_str(&string),
                     Err(e) => return Err(e),
                 },
-
                 _ => return Err(Unreachable(unreachable_rule!())),
             };
         }
@@ -146,6 +143,7 @@ impl Settings {
                 Rule::WHITESPACE => continue,
                 Rule::COMMENT => code.push_str(&format_comment(pair)),
                 Rule::negative_predicate_operator => code.push_str(pair.as_str()),
+                Rule::positive_predicate_operator => code.push_str(pair.as_str()),
                 Rule::repeat_once_operator => code.push_str(pair.as_str()),
                 Rule::optional_operator => code.push_str(pair.as_str()),
                 Rule::repeat_operator => code.push_str(pair.as_str()),
