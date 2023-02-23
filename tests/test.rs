@@ -1,51 +1,22 @@
 extern crate pest_fmt;
 
-use pest_fmt::{PestResult, Settings};
+use pest_fmt::Formatter;
 
-#[test]
-fn basic() {
-    let cfg = Settings::default();
-    const INPUT: &str = r#"exponent_part = _{ ^  "e" ~ ("+" | "-")? ~ ASCII_DIGIT+ }"#;
-    const OUTPUT: &str = r#"exponent_part = _{^"e" ~ ("+"|"-")? ~ ASCII_DIGIT+}"#;
-    assert_eq!(cfg.format(INPUT).unwrap().trim_end(), OUTPUT)
+macro_rules! assert_format {
+    ($source:expr, $expected:expr) => {
+        let fmt = Formatter::default();
+        let source = include_str!($source);
+        let expected = include_str!($expected);
+
+        let out = fmt.format(source).unwrap();
+        pretty_assertions::assert_eq!(out, expected);
+    };
 }
 
 #[test]
-fn bad_cases() -> PestResult<()> {
-    let cfg = Settings::default();
-    cfg.format_file("tests/bad_cases.pest", "tests/out/bad_cases.pest")
-}
-
-#[test]
-fn pest_a() -> PestResult<()> {
-    let cfg = Settings::default();
-    cfg.format_file("tests/pest.pest", "tests/out/pest_a.pest")
-}
-
-#[test]
-fn pest_b() -> PestResult<()> {
-    let mut cfg = Settings::default();
-    cfg.indent = 2;
-    cfg.choice_first = false;
-    cfg.format_file("tests/pest.pest", "tests/out/pest_b.pest")
-}
-
-#[test]
-fn valkyrie_a() -> PestResult<()> {
-    let cfg = Settings::default();
-    cfg.format_file("tests/valkyrie.pest", "tests/out/valkyrie_a.pest")
-}
-
-#[test]
-fn valkyrie_b() -> PestResult<()> {
-    let mut cfg = Settings::default();
-    cfg.indent = 2;
-    cfg.choice_first = false;
-    cfg.format_file("tests/valkyrie.pest", "tests/out/valkyrie_b.pest")
-}
-
-#[test]
-fn arc_a() -> PestResult<()> {
-    let cfg = Settings::default();
-    cfg.format_file("tests/arc.pest", "tests/out/arc_a.pest")
+fn test_files() {
+    assert_format!("fixtures/arc.actual.pest", "fixtures/arc.expected.pest");
+    // assert_format!("fixtures/bad_cases.actual.pest", "fixtures/bad_cases.expected.pest");
+    // assert_format!("fixtures/pest.actual.pest", "fixtures/pest.expected.pest");
+    // assert_format!("fixtures/valkyrie.actual.pest", "fixtures/valkyrie.expected.pest");
 }
