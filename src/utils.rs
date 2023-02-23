@@ -1,32 +1,5 @@
-use crate::Settings;
 use pest::Span;
-use std::fmt::{Debug, Error, Formatter};
-
-impl Default for Settings {
-    fn default() -> Self {
-        Settings {
-            // tab = 4 space
-            indent: 4,
-            set_alignment: true,
-            blank_lines: None,
-            choice_first: true,
-            choice_hanging: false,
-            set_space: 1,
-            choice_space: 0,
-            braces_space: 0,
-            sequence_space: 1,
-            parentheses_space: 0,
-        }
-    }
-}
-
-impl Settings {
-    pub fn style(s: &str) -> Settings {
-        match s {
-            _ => Settings::default(),
-        }
-    }
-}
+use std::fmt::{Debug, Error};
 
 pub fn is_one_line(span: Span) -> bool {
     let s = span.start_pos().line_col().0;
@@ -42,7 +15,7 @@ pub fn get_lines(span: Span) -> (usize, usize) {
 
 #[derive(Clone)]
 pub struct GrammarRule {
-    pub is_comment: bool,
+    pub is_raw: bool,
     pub identifier: String,
     pub modifier: String,
     pub code: String,
@@ -50,18 +23,12 @@ pub struct GrammarRule {
 }
 
 impl GrammarRule {
-    pub fn comment(c: &str) -> Self {
-        GrammarRule {
-            /// is_comment_or_blank_line
-            is_comment: true,
-            identifier: "".to_string(),
-            modifier: "".to_string(),
-            code: c.to_string(),
-            lines: (0, 0),
-        }
+    pub fn raw(c: &str, lines: (usize, usize)) -> Self {
+        GrammarRule { is_raw: true, identifier: "".to_string(), modifier: "".to_string(), code: c.to_string(), lines }
     }
+
     pub fn to_string(&self, indent: usize) -> String {
-        if self.is_comment {
+        if self.is_raw {
             return self.code.clone();
         }
         let mut code = self.identifier.clone();
@@ -69,14 +36,14 @@ impl GrammarRule {
             code.push_str(" ")
         }
         code.push_str(" = ");
-        code.push_str(&self.modifier);
+        code.push_str(&self.modifier.trim());
         code.push_str(&self.code);
         return code;
     }
 }
 
 impl Debug for GrammarRule {
-    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), Error> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), Error> {
         write!(f, "{}: {:?}", self.identifier, self.lines)
     }
 }

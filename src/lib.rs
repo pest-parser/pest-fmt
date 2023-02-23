@@ -1,36 +1,36 @@
 extern crate pest;
-#[cfg(test)]
-extern crate pest_generator;
-#[cfg(test)]
-extern crate proc_macro;
-#[cfg(test)]
-#[macro_use]
-extern crate quote;
 
 #[cfg(test)]
-mod pre_build;
+extern crate proc_macro;
+
+#[cfg(test)]
+extern crate quote;
+
 #[macro_use]
 mod error;
 pub mod formatter;
-pub mod grammar;
 pub mod utils;
 
 pub use error::{PestError, PestResult};
 
-pub struct Settings {
-    pub indent: usize,
-    pub choice_hanging: bool,
-    pub choice_first: bool,
-    pub set_alignment: bool,
-    pub blank_lines: Option<usize>,
-    /// spaces between `=`
-    pub set_space: usize,
-    /// spaces between `|`
-    pub choice_space: usize,
-    /// spaces between `{ }`
-    pub braces_space: usize,
-    /// spaces between `~`
-    pub sequence_space: usize,
-    /// spaces between `( )`
-    pub parentheses_space: usize,
+pub struct Formatter {
+    /// Indent space size
+    indent: usize,
+    choice_first: bool,
+    choice_space: usize,
+    sequence_space: usize,
+}
+
+impl Default for Formatter {
+    fn default() -> Self {
+        Formatter { indent: 4, choice_first: true, choice_space: 1, sequence_space: 1 }
+    }
+}
+
+impl Formatter {
+    pub fn style(s: &str) -> Formatter {
+        match s {
+            _ => Formatter::default(),
+        }
+    }
 }
