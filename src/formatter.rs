@@ -1,4 +1,4 @@
-use crate::{error::PestError::Unreachable, utils::GrammarRule, Formatter, PestError, PestResult};
+use crate::{error::PestError::Unreachable, utils::GrammarRule, Formatter, Node, PestError, PestResult};
 use pest::iterators::Pair;
 use pest::Parser;
 use pest_derive::Parser;
@@ -24,67 +24,82 @@ impl Formatter {
     }
 
     pub fn format(&self, input: &str) -> PestResult<String> {
-        let mut pairs = match PestParser::parse(Rule::grammar_rules, input) {
+        let pairs = match PestParser::parse(Rule::grammar_rules, input) {
             Ok(pairs) => pairs,
             Err(e) => return Err(PestError::ParseFail(e.to_string())),
-        }
-        .peekable();
+        };
 
         let mut code = String::new();
-        let mut output = vec![];
+        let mut nodes = vec![];
 
-        for pair in pairs.clone() {
-            let next_pair = pairs.peek();
-
-            let start = pair.as_span().start_pos().line_col().0;
-            let end = pair.as_span().end_pos().line_col().0;
-
+        for pair in pairs {
             match pair.as_rule() {
-                Rule::EOI => continue,
                 Rule::COMMENT => {
                     let code = self.format_comment(pair);
-                    output.push(GrammarRule::raw(&code, (start, end)));
+                    nodes.push(Node::Comment(code));
                 }
                 Rule::grammar_rule => match self.format_grammar_rule(pair) {
-                    Ok(rule) => output.push(rule),
+                    Ok(node) => nodes.push(node),
                     Err(e) => return Err(e),
                 },
                 Rule::grammar_doc => {
                     let code = self.format_line_doc(pair, "//!");
-                    output.push(GrammarRule::raw(&code, (start, end)));
+                    nodes.push(Node::LineDoc(code));
                 }
-                Rule::WHITESPACE => continue,
-                _ => return Err(Unreachable(unreachable_rule!())),
+                _ => nodes.push(Node::Other(pair.as_str().to_string())),
             };
         }
 
-        // println!("{:?}", output.iter().map(|s| s.to_string(0)).collect::<Vec<_>>());
+        // println!("------ nodes: {:?}", nodes);
 
         let mut last = 0 as usize;
         let mut group = vec![];
         let mut groups = vec![];
-        for rule in output {
-            let (s, e) = rule.lines;
-            if last + 1 == s {
-                group.push(rule)
-            } else {
-                if group.len() != 0 {
-                    groups.push(group);
+        let mut nodes = nodes.iter().peekable();
+
+        let hardbreak = Node::Other("".to_string());
+
+        while let Some(node) = nodes.next() {
+            let next_node = nodes.peek();
+
+            match &node {
+                Node::Rule(rule) => {
+                    let (s, e) = rule.lines;
+                    if last + 1 == s {
+                        group.push(node);
+                    } else {
+                        if group.len() != 0 {
+                            groups.push(group);
+                        }
+                        group = vec![node];
+                    }
+                    last = e;
+
+                    if let Some(Node::LineDoc(_)) = next_node {
+                        group.push(&hardbreak);
+                    }
                 }
-                group = vec![rule]
+                _ => {
+                    group.push(node);
+                }
             }
-            last = e
         }
         groups.push(group);
 
         for group in groups {
             let mut length = vec![];
+            let mut max = 0;
             for r in &group {
-                length.push(r.identifier.chars().count())
+                match r {
+                    Node::Rule(rule) => {
+                        length.push(rule.identifier.chars().count());
+                        max = *length.iter().max().unwrap();
+                    }
+                    _ => (),
+                }
             }
-            let max = length.iter().max().unwrap();
 
-            code.push_str(&group.iter().map(|rule| rule.to_string(*max)).collect::<Vec<_>>().join("\n"));
+            code.push_str(&group.iter().map(|rule| rule.to_string(max)).collect::<Vec<_>>().join("\n"));
             code.push_str("\n");
         }
 
@@ -94,7 +109,7 @@ impl Formatter {
         return Ok(out);
     }
 
-    fn format_grammar_rule(&self, pairs: Pair<Rule>) -> PestResult<GrammarRule> {
+    fn format_grammar_rule(&self, pairs: Pair<Rule>) -> PestResult<Node> {
         let mut code = String::new();
         let mut modifier = " ".to_string();
         let mut identifier = String::new();
@@ -114,7 +129,7 @@ impl Formatter {
                 Rule::expression => match self.format_expression(pair) {
                     Ok(s) => {
                         if start == end {
-                            code = format!("{{ {} }}", s.join("|"));
+                            code = format!("{{ {} }}", s.join(" | "));
                         } else if self.choice_first {
                             code = format!("{{\n  {}}}", indent(&s.join("\n| "), self.indent - 2));
                         } else {
@@ -124,13 +139,12 @@ impl Formatter {
                     Err(e) => return Err(e),
                 },
                 Rule::line_doc => {
-                    code.push_str(&self.format_line_doc(pair, "///"));
-                    return Ok(GrammarRule::raw(&code, (start, end)));
+                    return Ok(Node::LineDoc(self.format_line_doc(pair, "///")));
                 }
                 _ => (),
             };
         }
-        return Ok(GrammarRule { is_raw: false, identifier, modifier, code, lines: (start, end) });
+        return Ok(Node::Rule(GrammarRule { is_raw: false, identifier, modifier, code, lines: (start, end) }));
     }
 
     fn format_expression(&self, pairs: Pair<Rule>) -> PestResult<Vec<String>> {
@@ -337,11 +351,14 @@ mod tests {
             ///comment1
                 ///comment2
             a = { "a" }
+            ///comment3
             "#,
             r#"
             /// comment1
             /// comment2
             a = { "a" }
+            
+            /// comment3
             "#,
         };
 
