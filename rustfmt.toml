@@ -1,10 +1,10 @@
-version = "Two"
 edition = "2018"
 max_width = 102400
+version = "Two"
 
+control_brace_style = "ClosingNextLine"
 merge_imports = true
 use_small_heuristics = "Max"
-control_brace_style = "ClosingNextLine"
 
 [pest]
-exclude = ["tests/*"]
+exclude = ["tests/**/*.pest", "tests/test.pest"]

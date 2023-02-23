@@ -1,45 +1,77 @@
-use pest_fmt::Settings;
+use ignore::{overrides::OverrideBuilder, WalkBuilder};
+use pest_fmt::Formatter;
 use std::{error::Error, fs};
 use toml::Value;
-use walkdir::WalkDir;
 
 fn main() -> Result<(), Box<dyn Error>> {
-    let mut cfg = Settings::default();
-    let mut exclude = vec![];
-    if let Ok(string) = fs::read_to_string("rustfmt.toml") {
-        if let Ok(rust_fmt) = string.parse::<Value>() {
-            if let Some(pest) = rust_fmt.get("pest") {
-                if let Some(value) = pest.get("exclude") {
-                    exclude = toml_string_or_string_list(value)
-                }
-                // TODO: use macros
-                if let Some(value) = pest.get("choice_first") {
-                    if let Some(b) = value.as_bool() {
-                        cfg.choice_first = b
-                    }
-                }
-                if let Some(value) = pest.get("choice_hanging") {
-                    if let Some(b) = value.as_bool() {
-                        cfg.choice_hanging = b
-                    }
-                }
-                if let Some(value) = pest.get("indent") {
-                    if let Some(i) = value.as_integer() {
-                        cfg.indent = i as usize
-                    }
-                }
+    let walker = build_walker(".");
+
+    let fmt = Formatter::default();
+
+    println!("Pest Formatter");
+    println!("-------------------------------------");
+
+    let mut count = 0;
+
+    for entry in walker.build() {
+        let entry = entry.unwrap();
+        let path = entry.path();
+
+        if path.is_file() {
+            fmt.format_file(&path, &path).unwrap();
+            count += 1;
+        }
+    }
+
+    println!("{} files formatted.", count);
+    Ok(())
+}
+
+fn build_walker(root: &str) -> WalkBuilder {
+    let mut builder = ignore::WalkBuilder::new(root);
+    builder.follow_links(true).git_ignore(true);
+
+    let mut ingore_override = OverrideBuilder::new(&root);
+
+    if let Ok(text) = fs::read_to_string("rustfmt.toml") {
+        let excludes = read_rustfmt(&text);
+        for exclude in excludes {
+            ingore_override.add(&exclude).unwrap();
+        }
+    }
+
+    let ingore_override = ingore_override.build().unwrap();
+
+    builder.filter_entry(move |entry| {
+        if entry.path().is_dir() {
+            return true;
+        }
+
+        if ingore_override.matched(entry.path(), false).is_whitelist() {
+            return false;
+        }
+
+        if let Some(path) = entry.path().to_str() {
+            if path.ends_with(".pest") {
+                return true;
+            }
+        }
+        return false;
+    });
+
+    builder
+}
+
+fn read_rustfmt(input: &str) -> Vec<String> {
+    if let Ok(rust_fmt) = input.parse::<Value>() {
+        if let Some(pest) = rust_fmt.get("pest") {
+            if let Some(value) = pest.get("exclude") {
+                return toml_string_or_string_list(value);
             }
         }
     }
-    // TODO: remove exclude
-    println!("Excluded: {:?}", exclude);
-    for entry in WalkDir::new(".").follow_links(true).into_iter().filter_map(|e| e.ok()) {
-        let f_name = entry.file_name().to_string_lossy();
-        if f_name.ends_with(".pest") {
-            println!("{}", f_name);
-        }
-    }
-    Ok(())
+
+    return vec![];
 }
 
 fn toml_string_or_string_list(value: &Value) -> Vec<String> {
@@ -55,6 +87,42 @@ fn toml_string_or_string_list(value: &Value) -> Vec<String> {
         }
         _ => (),
     }
-    // TODO: delete dup
+
     return out;
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_read_rustfmt() {
+        let text = fs::read_to_string("rustfmt.toml").unwrap();
+        let excludes = read_rustfmt(&text);
+        assert_eq!(vec!["tests/**/*.pest".to_string(), "tests/test.pest".to_string()], excludes);
+
+        // test other
+        let text = r#"
+        [pest]
+        exclude = "src/**/*"
+        "#;
+
+        let excludes = read_rustfmt(&text);
+        assert_eq!(vec!["src/**/*".to_string()], excludes);
+    }
+
+    #[test]
+    fn test_build_walker() {
+        let walker = build_walker(".");
+
+        let mut files: Vec<String> = vec![];
+        for entry in walker.build() {
+            let entry = entry.unwrap();
+            let path = entry.path();
+            if path.is_file() {
+                files.push(path.to_string_lossy().to_string());
+            }
+        }
+        assert_eq!(vec!["./src/grammar.pest".to_string()], files);
+    }
 }
