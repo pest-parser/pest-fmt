@@ -6,7 +6,7 @@ use toml::Value;
 fn main() -> Result<(), Box<dyn Error>> {
     let walker = build_walker(".");
 
-    let fmt = Formatter::default();
+    let fmt = Formatter::new();
 
     println!("Pest Formatter");
     println!("-------------------------------------");

@@ -28,9 +28,8 @@ impl Default for Formatter {
 }
 
 impl Formatter {
-    pub fn style(s: &str) -> Formatter {
-        match s {
-            _ => Formatter::default(),
-        }
+    /// Create new formatter
+    pub fn new() -> Formatter {
+        Formatter::default()
     }
 }
