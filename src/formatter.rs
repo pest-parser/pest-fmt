@@ -24,14 +24,18 @@ impl Formatter {
     }
 
     pub fn format(&self, input: &str) -> PestResult<String> {
-        let pairs = match PestParser::parse(Rule::grammar_rules, input) {
+        let mut pairs = match PestParser::parse(Rule::grammar_rules, input) {
             Ok(pairs) => pairs,
             Err(e) => return Err(PestError::ParseFail(e.to_string())),
-        };
+        }
+        .peekable();
+
         let mut code = String::new();
         let mut output = vec![];
 
-        for pair in pairs {
+        for pair in pairs.clone() {
+            let next_pair = pairs.peek();
+
             let start = pair.as_span().start_pos().line_col().0;
             let end = pair.as_span().end_pos().line_col().0;
 
@@ -83,7 +87,11 @@ impl Formatter {
             code.push_str(&group.iter().map(|rule| rule.to_string(*max)).collect::<Vec<_>>().join("\n"));
             code.push_str("\n");
         }
-        return Ok(code);
+
+        // Remove leading and trailing whitespace
+        let out = code.trim().to_string();
+
+        return Ok(out);
     }
 
     fn format_grammar_rule(&self, pairs: Pair<Rule>) -> PestResult<GrammarRule> {
@@ -186,10 +194,7 @@ impl Formatter {
                 Rule::expression => {
                     let e = self.format_expression(pair);
                     match e {
-                        Ok(expression) => {
-                            let joiner = format!("{0}|{0}", " ".repeat(self.choice_space));
-                            code.push_str(&expression.join(&joiner))
-                        }
+                        Ok(expression) => code.push_str(&expression.join(" | ")),
                         Err(e) => return Err(e),
                     }
                 }
@@ -238,7 +243,7 @@ impl Formatter {
         let raw = pairs.as_str();
         let code = format!("{} {}", prefix, raw.trim_start_matches(prefix).trim());
 
-        code
+        code.trim().to_string()
     }
 }
 

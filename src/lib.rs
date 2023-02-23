@@ -17,13 +17,12 @@ pub struct Formatter {
     /// Indent space size
     indent: usize,
     choice_first: bool,
-    choice_space: usize,
     sequence_space: usize,
 }
 
 impl Default for Formatter {
     fn default() -> Self {
-        Formatter { indent: 4, choice_first: true, choice_space: 1, sequence_space: 1 }
+        Formatter { indent: 4, choice_first: true, sequence_space: 1 }
     }
 }
 
