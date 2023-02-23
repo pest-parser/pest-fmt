@@ -1,18 +1,24 @@
 [package]
-name = "pest_fmt"
-version = "0.1.4"
 authors = ["Aster <192608617@qq.com>"]
-edition = "2018"
 description = "A formatter tool for pest"
-repository = "https://github.com/pest-parser/pest-fmt"
+edition = "2018"
 license = "MPL-2.0"
+name = "pest_fmt"
+repository = "https://github.com/pest-parser/pest-fmt"
+version = "0.1.4"
 
 [dependencies]
-pest = "2.1"
+pest = "2.5"
+pest_derive = "2.5"
 text-utils = "0.2"
-walkdir = "2.3"
 toml = "0.5"
+walkdir = "2.3"
 
 [dev-dependencies]
-pest_generator = "2.1"
+indoc = "2"
+pretty_assertions = "1.3.0"
 quote = "1.0"
+
+[[bin]]
+name = "pestfmt"
+path = "src/main.rs"
