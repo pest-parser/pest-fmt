@@ -213,13 +213,23 @@ impl Formatter {
                     }
                 }
                 Rule::_push => match self.format_term(pair) {
-                    Ok(string) => code.push_str(&string),
+                    Ok(string) => {
+                        code.push_str("PUSH");
+                        code.push_str(&string)
+                    }
+                    Err(e) => return Err(e),
+                },
+                Rule::peek_slice => match self.format_term(pair) {
+                    Ok(string) => {
+                        code.push_str("PEEK");
+                        code.push_str(&string)
+                    }
                     Err(e) => return Err(e),
                 },
                 Rule::repeat_min => code.push_str(&format_repeat_min_max(pair)?),
                 Rule::repeat_exact => code.push_str(&format_repeat_min_max(pair)?),
                 Rule::repeat_min_max => code.push_str(&format_repeat_min_max(pair)?),
-                _ => return Err(Unreachable(unreachable_rule!())),
+                _ => code.push_str(pair.as_str()),
             };
         }
         return Ok(code);
@@ -372,5 +382,17 @@ mod tests {
             //! comment2
             a = { "a" }"#,
         };
+    }
+
+    #[test]
+    fn test_stack() {
+        expect_correction! {
+            r#"
+            a = ${PUSH(^"a"  )  ~ (!(NEWLINE|PEEK)~ ANY)+ ~ POP }
+            "#,
+            r#"
+            a = ${ PUSH(^"a") ~ (!(NEWLINE | PEEK) ~ ANY)+ ~ POP }
+            "#,
+        }
     }
 }
