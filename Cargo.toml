@@ -5,7 +5,7 @@ edition = "2018"
 license = "MPL-2.0"
 name = "pest_fmt"
 repository = "https://github.com/pest-parser/pest-fmt"
-version = "0.1.4"
+version = "0.2.1"
 
 [dependencies]
 ignore = "0.4"
