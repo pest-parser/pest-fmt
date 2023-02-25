@@ -3,14 +3,14 @@ use pest_fmt::{Formatter, PestResult};
 use std::{error::Error, fs, path::Path};
 use toml::Value;
 
-pub fn format_file<P: AsRef<Path>>(path_from: P, path_to: P) -> PestResult<()> {
+pub fn format_file<P: AsRef<Path>>(path_from: P, path_to: P) -> PestResult<bool> {
     let input = std::fs::read_to_string(path_from)?;
     let fmt = Formatter::new(&input);
     let output = fmt.format()?;
 
     let mut file = std::fs::File::create(path_to)?;
     std::io::Write::write_all(&mut file, output.as_bytes())?;
-    Ok(())
+    Ok(input != output)
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
@@ -26,12 +26,20 @@ fn main() -> Result<(), Box<dyn Error>> {
         let path = entry.path();
 
         if path.is_file() {
-            format_file(&path, &path).unwrap();
-            count += 1;
+            match format_file(&path, &path) {
+                Ok(changed) => {
+                    if changed {
+                        count += 1
+                    }
+                }
+                Err(err) => {
+                    eprintln!("Error: {} {:?}", path.display(), err)
+                }
+            }
         }
     }
 
-    println!("{} files formatted.", count);
+    println!("{count} files formatted.");
     Ok(())
 }
 
@@ -39,7 +47,7 @@ fn build_walker(root: &str) -> WalkBuilder {
     let mut builder = ignore::WalkBuilder::new(root);
     builder.follow_links(true).git_ignore(true);
 
-    let mut ingore_override = OverrideBuilder::new(&root);
+    let mut ingore_override = OverrideBuilder::new(root);
 
     if let Ok(text) = fs::read_to_string("rustfmt.toml") {
         let excludes = read_rustfmt(&text);
@@ -64,7 +72,8 @@ fn build_walker(root: &str) -> WalkBuilder {
                 return true;
             }
         }
-        return false;
+
+        false
     });
 
     builder
