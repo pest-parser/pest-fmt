@@ -12,15 +12,18 @@ impl Formatter<'_> {
     pub fn format(&self) -> PestResult<String> {
         let input = self.input;
 
-        let pairs = match PestParser::parse(Rule::grammar_rules, input) {
+        let mut pairs = match PestParser::parse(Rule::grammar_rules, input) {
             Ok(pairs) => pairs,
             Err(e) => return Err(PestError::ParseFail(e.to_string())),
-        };
+        }
+        .peekable();
 
         let mut code = String::new();
         let mut nodes = vec![];
 
-        for pair in pairs {
+        while let Some(pair) = pairs.next() {
+            let pair_span = pair.as_span();
+
             match pair.as_rule() {
                 Rule::COMMENT => {
                     let code = self.format_comment(pair);
@@ -34,8 +37,25 @@ impl Formatter<'_> {
                     let code = self.format_line_doc(pair, "//!");
                     nodes.push(Node::LineDoc(code));
                 }
-                _ => nodes.push(Node::Other(pair.as_str().to_string())),
+                _ => nodes.push(Node::Str(pair.as_str().to_string())),
             };
+
+            // If match the text containes "\n" between current pair and next pair, then push a new line
+            // For example:
+            //
+            // 1. `a = { "a" }\nb = { "b" }` => `a = { "a" }\nb = { "b" }`
+            // 2. `a = { "a" }\n\nb = { "b" }` => `a = { "a" }\n\nb = { "b" }`
+            // 3. `a = { "a" }\n\n\nb = { "b" }` => `a = { "a" }\n\nb = { "b" }`
+            if let Some(next_pair) = pairs.peek() {
+                let last_node_str = nodes.iter().last().map(|n| n.to_string(0)).unwrap_or("".into());
+                if !last_node_str.ends_with("\n") {
+                    let between_str = self.get_str((pair_span.end(), next_pair.as_span().start()));
+                    // If there have at least 2 "\n" then push a new line
+                    if between_str.matches("\n").count() >= 2 {
+                        nodes.push(Node::Str("".to_string()));
+                    }
+                }
+            }
         }
 
         // println!("------ nodes: {:?}", nodes);
@@ -45,7 +65,7 @@ impl Formatter<'_> {
         let mut groups = vec![];
         let mut nodes = nodes.iter().peekable();
 
-        let hardbreak = Node::Other("".to_string());
+        let hardbreak = Node::Str("".to_string());
 
         while let Some(node) = nodes.next() {
             let next_node = nodes.peek();
@@ -381,6 +401,33 @@ mod tests {
             "#,
             r#"
             a = ${ PUSH(^"a") ~ (!(NEWLINE | PEEK) ~ ANY)+ ~ POP }
+            "#,
+        }
+    }
+
+    #[test]
+    fn test_keep_exist_newline() {
+        expect_correction! {
+            r#"
+            a = { "a" }
+
+            b = { "b" }
+            
+            
+            c = { "c" }
+            d = { "d" }
+            // This is comment
+            e = { "e" }
+            "#,
+            r#"
+            a = { "a" }
+
+            b = { "b" }
+            
+            c = { "c" }
+            d = { "d" }
+            // This is comment
+            e = { "e" }
             "#,
         }
     }

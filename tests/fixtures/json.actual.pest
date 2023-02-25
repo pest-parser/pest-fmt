@@ -15,7 +15,10 @@ array = { "[" ~ value ~ ("," ~ value)* ~ "]" | "[" ~ "]" }
 value = { string | number | object | array | bool | null }
 string  = @{ PUSH("\"") ~ inner ~ POP }
 inner   = @{ (!(PEEK | "\\") ~ ANY)* ~ (escape ~ inner)? }
+
+
 escape  = @{ "\\" ~ ("\"" | "\\" | "/" | "b" | "f" | "n" | "r" | "t" | unicode) }
+
 // Unicode, e.g.: `u0000`
 unicode = @{ "u" ~ ASCII_HEX_DIGIT{4} }
 

@@ -28,6 +28,20 @@ impl<'a> Formatter<'a> {
     pub fn new(input: &'a str) -> Formatter<'a> {
         Self { input, indent: 4, choice_first: true, sequence_space: 1 }
     }
+
+    /// Returns the str of the range in self.input, return empty str if the
+    /// range is valid (out of bounds).
+    #[inline]
+    #[allow(unused)]
+    pub(crate) fn get_str(&self, span: (usize, usize)) -> &str {
+        let (start, end) = span;
+        // Avoid out of bounds
+        if start > end || end > self.input.len() {
+            return "";
+        }
+
+        &self.input[start..end]
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -35,7 +49,7 @@ enum Node {
     Rule(GrammarRule),
     Comment(String),
     LineDoc(String),
-    Other(String),
+    Str(String),
 }
 
 impl Node {
@@ -44,7 +58,7 @@ impl Node {
             Node::Rule(rule) => rule.to_string(indent),
             Node::Comment(c) => c.to_owned(),
             Node::LineDoc(c) => c.to_owned(),
-            Node::Other(c) => c.to_owned(),
+            Node::Str(c) => c.to_owned(),
         }
     }
 }
