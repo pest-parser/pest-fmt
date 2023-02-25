@@ -4,11 +4,12 @@ use pest_fmt::Formatter;
 
 macro_rules! assert_format {
     ($source:expr, $expected:expr) => {
-        let fmt = Formatter::default();
         let source = include_str!($source);
         let expected = include_str!($expected);
 
-        let out = fmt.format(source).unwrap();
+        let fmt = Formatter::new(source);
+
+        let out = fmt.format().unwrap();
         pretty_assertions::assert_eq!(out, expected);
     };
 }

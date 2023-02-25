@@ -2,28 +2,16 @@ use crate::{error::PestError::Unreachable, utils::GrammarRule, Formatter, Node, 
 use pest::iterators::Pair;
 use pest::Parser;
 use pest_derive::Parser;
-use std::{
-    fs::{read_to_string, File},
-    io::Write,
-    path::Path,
-};
 use text_utils::indent;
 
 #[derive(Parser)]
 #[grammar = "grammar.pest"]
 struct PestParser;
 
-impl Formatter {
-    pub fn format_file<P: AsRef<Path>>(&self, path_from: P, path_to: P) -> PestResult<()> {
-        let input = read_to_string(path_from)?;
-        let output = self.format(&input)?;
+impl Formatter<'_> {
+    pub fn format(&self) -> PestResult<String> {
+        let input = self.input;
 
-        let mut file = File::create(path_to)?;
-        file.write_all(output.as_bytes())?;
-        Ok(())
-    }
-
-    pub fn format(&self, input: &str) -> PestResult<String> {
         let pairs = match PestParser::parse(Rule::grammar_rules, input) {
             Ok(pairs) => pairs,
             Err(e) => return Err(PestError::ParseFail(e.to_string())),
@@ -306,11 +294,12 @@ mod tests {
 
     macro_rules! expect_correction {
         ($source:expr, $expected:expr,) => {
-            let fmt = Formatter::default();
             let source = indoc::indoc! { $source };
             let expected = indoc::indoc! { $expected };
 
-            assert_eq!(fmt.format(source).unwrap().trim_end(), expected.trim_end())
+            let fmt = Formatter::new(source);
+
+            assert_eq!(fmt.format().unwrap().trim_end(), expected.trim_end())
         };
         ($source:expr, $expected:expr) => {
             expect_correction!($source, $expected,)

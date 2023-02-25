@@ -14,23 +14,19 @@ pub mod utils;
 pub use error::{PestError, PestResult};
 use utils::GrammarRule;
 
-pub struct Formatter {
+pub struct Formatter<'a> {
+    input: &'a str,
+
     /// Indent space size
     indent: usize,
     choice_first: bool,
     sequence_space: usize,
 }
 
-impl Default for Formatter {
-    fn default() -> Self {
-        Formatter { indent: 4, choice_first: true, sequence_space: 1 }
-    }
-}
-
-impl Formatter {
+impl<'a> Formatter<'a> {
     /// Create new formatter
-    pub fn new() -> Formatter {
-        Formatter::default()
+    pub fn new(input: &'a str) -> Formatter<'a> {
+        Self { input, indent: 4, choice_first: true, sequence_space: 1 }
     }
 }
 

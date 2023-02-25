@@ -1,12 +1,20 @@
 use ignore::{overrides::OverrideBuilder, WalkBuilder};
-use pest_fmt::Formatter;
-use std::{error::Error, fs};
+use pest_fmt::{Formatter, PestResult};
+use std::{error::Error, fs, path::Path};
 use toml::Value;
+
+pub fn format_file<P: AsRef<Path>>(path_from: P, path_to: P) -> PestResult<()> {
+    let input = std::fs::read_to_string(path_from)?;
+    let fmt = Formatter::new(&input);
+    let output = fmt.format()?;
+
+    let mut file = std::fs::File::create(path_to)?;
+    std::io::Write::write_all(&mut file, output.as_bytes())?;
+    Ok(())
+}
 
 fn main() -> Result<(), Box<dyn Error>> {
     let walker = build_walker(".");
-
-    let fmt = Formatter::new();
 
     println!("Pest Formatter");
     println!("-------------------------------------");
@@ -18,7 +26,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         let path = entry.path();
 
         if path.is_file() {
-            fmt.format_file(&path, &path).unwrap();
+            format_file(&path, &path).unwrap();
             count += 1;
         }
     }
