@@ -4,13 +4,15 @@ use std::fmt::{Debug, Error};
 pub fn is_one_line(span: Span) -> bool {
     let s = span.start_pos().line_col().0;
     let e = span.end_pos().line_col().0;
-    return s == e;
+
+    s == e
 }
 
 pub fn get_lines(span: Span) -> (usize, usize) {
     let s = span.start_pos().line_col().0;
     let e = span.end_pos().line_col().0;
-    return (s, e);
+
+    (s, e)
 }
 
 #[derive(Clone)]
@@ -33,12 +35,13 @@ impl GrammarRule {
         }
         let mut code = self.identifier.clone();
         while code.chars().count() < indent {
-            code.push_str(" ")
+            code.push(' ')
         }
         code.push_str(" = ");
-        code.push_str(&self.modifier.trim());
+        code.push_str(self.modifier.trim());
         code.push_str(&self.code);
-        return code;
+
+        code
     }
 }
 

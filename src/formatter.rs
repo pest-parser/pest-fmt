@@ -48,10 +48,10 @@ impl Formatter<'_> {
             // 3. `a = { "a" }\n\n\nb = { "b" }` => `a = { "a" }\n\nb = { "b" }`
             if let Some(next_pair) = pairs.peek() {
                 let last_node_str = nodes.iter().last().map(|n| n.to_string(0)).unwrap_or("".into());
-                if !last_node_str.ends_with("\n") {
+                if !last_node_str.ends_with('\n') {
                     let between_str = self.get_str((pair_span.end(), next_pair.as_span().start()));
                     // If there have at least 2 "\n" then push a new line
-                    if between_str.matches("\n").count() >= 2 {
+                    if between_str.matches('\n').count() >= 2 {
                         nodes.push(Node::Str("".to_string()));
                     }
                 }
@@ -60,7 +60,7 @@ impl Formatter<'_> {
 
         // println!("------ nodes: {:?}", nodes);
 
-        let mut last = 0 as usize;
+        let mut last = 0_usize;
         let mut group = vec![];
         let mut groups = vec![];
         let mut nodes = nodes.iter().peekable();
@@ -76,7 +76,7 @@ impl Formatter<'_> {
                     if last + 1 == s {
                         group.push(node);
                     } else {
-                        if group.len() != 0 {
+                        if !group.is_empty() {
                             groups.push(group);
                         }
                         group = vec![node];
@@ -98,23 +98,20 @@ impl Formatter<'_> {
             let mut length = vec![];
             let mut max = 0;
             for r in &group {
-                match r {
-                    Node::Rule(rule) => {
-                        length.push(rule.identifier.chars().count());
-                        max = *length.iter().max().unwrap();
-                    }
-                    _ => (),
+                if let Node::Rule(rule) = r {
+                    length.push(rule.identifier.chars().count());
+                    max = *length.iter().max().unwrap();
                 }
             }
 
             code.push_str(&group.iter().map(|rule| rule.to_string(max)).collect::<Vec<_>>().join("\n"));
-            code.push_str("\n");
+            code.push('\n');
         }
 
         // Remove leading and trailing whitespace
         let out = code.trim().to_string();
 
-        return Ok(out);
+        Ok(out)
     }
 
     fn format_grammar_rule(&self, pairs: Pair<Rule>) -> PestResult<Node> {
@@ -152,7 +149,7 @@ impl Formatter<'_> {
                 _ => (),
             };
         }
-        return Ok(Node::Rule(GrammarRule { is_raw: false, identifier, modifier, code, lines: (start, end) }));
+        Ok(Node::Rule(GrammarRule { is_raw: false, identifier, modifier, code, lines: (start, end) }))
     }
 
     fn format_expression(&self, pairs: Pair<Rule>) -> PestResult<Vec<String>> {
@@ -181,7 +178,7 @@ impl Formatter<'_> {
             };
         }
         code.push(term.clone());
-        return Ok(code);
+        Ok(code)
     }
 
     fn format_term(&self, pairs: Pair<Rule>) -> PestResult<String> {
@@ -191,7 +188,7 @@ impl Formatter<'_> {
                 Rule::WHITESPACE => continue,
                 Rule::COMMENT => {
                     let comment = &self.format_comment(pair);
-                    code.push_str(&format!(" {}\n", comment));
+                    code.push_str(&format!(" {comment}\n"));
                 }
                 Rule::negative_predicate_operator => code.push_str(pair.as_str()),
                 Rule::positive_predicate_operator => code.push_str(pair.as_str()),
@@ -240,7 +237,7 @@ impl Formatter<'_> {
                 _ => code.push_str(pair.as_str()),
             };
         }
-        return Ok(code);
+        Ok(code)
     }
 
     fn format_comment(&self, pairs: Pair<Rule>) -> String {
@@ -268,7 +265,7 @@ impl Formatter<'_> {
         } else {
             unreachable!()
         }
-        return code;
+        code
     }
 
     fn format_line_doc(&self, pairs: Pair<Rule>, prefix: &str) -> String {
@@ -290,7 +287,7 @@ fn format_repeat_exact(pairs: Pair<Rule>) -> String {
             _ => unreachable!(),
         };
     }
-    return code;
+    code
 }
 
 fn format_repeat_min_max(pairs: Pair<Rule>) -> PestResult<String> {
@@ -305,7 +302,7 @@ fn format_repeat_min_max(pairs: Pair<Rule>) -> PestResult<String> {
             _ => return Err(Unreachable(unreachable_rule!())),
         };
     }
-    return Ok(code);
+    Ok(code)
 }
 
 #[cfg(test)]
@@ -429,6 +426,32 @@ mod tests {
             // This is comment
             e = { "e" }
             "#,
+        }
+    }
+
+    #[test]
+    fn test_group_assigns() {
+        expect_correction! {
+            r#"
+            a1 = {"A"}
+            foo_bar_dar = @{"A"}
+            a2 = _{"A"}
+
+            b1 = {"b"}
+            b1_b1 = ${"b1"}
+            // comment
+            c1 = { "c" }
+            "#,
+            r#"
+            a1          = { "A" }
+            foo_bar_dar = @{ "A" }
+            a2          = _{ "A" }
+
+            b1    = { "b" }
+            b1_b1 = ${ "b1" }
+            // comment
+            c1 = { "c" }
+            "#
         }
     }
 }

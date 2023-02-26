@@ -88,7 +88,7 @@ fn read_rustfmt(input: &str) -> Vec<String> {
         }
     }
 
-    return vec![];
+    vec![]
 }
 
 fn toml_string_or_string_list(value: &Value) -> Vec<String> {
@@ -105,7 +105,7 @@ fn toml_string_or_string_list(value: &Value) -> Vec<String> {
         _ => (),
     }
 
-    return out;
+    out
 }
 
 #[cfg(test)]
@@ -124,7 +124,7 @@ mod tests {
         exclude = "src/**/*"
         "#;
 
-        let excludes = read_rustfmt(&text);
+        let excludes = read_rustfmt(text);
         assert_eq!(vec!["src/**/*".to_string()], excludes);
     }
 
