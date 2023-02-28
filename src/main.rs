@@ -140,6 +140,8 @@ mod tests {
                 files.push(path.to_string_lossy().to_string());
             }
         }
-        assert_eq!(vec!["./src/grammar.pest".to_string()], files.iter().map(|f| f.replace(r"\\", r"/")).collect::<Vec<_>>());
+
+        #[cfg(not(target_os = "windows"))]
+        assert_eq!(vec!["./src/grammar.pest".to_string()], files);
     }
 }

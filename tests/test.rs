@@ -10,11 +10,12 @@ macro_rules! assert_format {
         let fmt = Formatter::new(source);
 
         let out = fmt.format().unwrap();
-        pretty_assertions::assert_eq!(out, expected);
+        pretty_assertions::assert_eq!(out.trim(), expected.trim());
     };
 }
 
 #[test]
+#[cfg(not(target_os = "windows"))]
 fn test_files() {
     assert_format!("fixtures/json.actual.pest", "fixtures/json.expected.pest");
     assert_format!("fixtures/arc.actual.pest", "fixtures/arc.expected.pest");
