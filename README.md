@@ -1,6 +1,6 @@
 # Pest Formatter
 
-[![Test](https://github.com/pest-parser/pest-fmt/actions/workflows/test.yml/badge.svg)](https://github.com/pest-parser/pest-fmt/actions/workflows/test.yml)
+[![Test](https://github.com/pest-parser/pest-fmt/actions/workflows/test.yml/badge.svg)](https://github.com/pest-parser/pest-fmt/actions/workflows/test.yml) [![Crate](https://img.shields.io/crates/v/pest_fmt?color=1t&label=Crate)](https://crates.io/crates/pest_fmt)
 
 Pest Formatter is a tool to format [Pest](https://pest.rs) grammar files.
 
