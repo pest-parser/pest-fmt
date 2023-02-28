@@ -1,80 +1,107 @@
-use crate::{
-    error::PestError::Unreachable,
-    grammar::{PestParser, Rule},
-    utils::GrammarRule,
-    PestError, PestResult, Settings,
-};
-use pest::{iterators::Pair, Parser};
-use std::{
-    fs::{read_to_string, File},
-    io::Write,
-};
+use crate::{error::PestError::Unreachable, Formatter, GrammarRule, Node, PestError, PestResult};
+use pest::iterators::Pair;
+use pest::Parser;
+use pest_derive::Parser;
 use text_utils::indent;
 
-impl Settings {
-    pub fn format_file(&self, path_from: &str, path_to: &str) -> PestResult<()> {
-        let r = read_to_string(path_from)?;
-        let s = self.format(&r)?;
-        let mut file = File::create(path_to)?;
-        file.write_all(s.as_bytes())?;
-        Ok(())
-    }
-    pub fn format(&self, text: &str) -> PestResult<String> {
-        let pairs = match PestParser::parse(Rule::grammar_rules, text) {
+#[derive(Parser)]
+#[grammar = "grammar.pest"]
+struct PestParser;
+
+impl Formatter<'_> {
+    pub fn format(&self) -> PestResult<String> {
+        let input = self.input;
+
+        let mut pairs = match PestParser::parse(Rule::grammar_rules, input) {
             Ok(pairs) => pairs,
             Err(e) => return Err(PestError::ParseFail(e.to_string())),
-        };
+        }
+        .peekable();
+
         let mut code = String::new();
-        let mut codes = vec![];
-        for pair in pairs {
+        let mut nodes = vec![];
+
+        while let Some(pair) = pairs.next() {
+            let span = pair.as_span();
+
             match pair.as_rule() {
-                Rule::EOI => continue,
                 Rule::COMMENT => {
-                    let start = pair.as_span().start_pos().line_col().0;
-                    let end = pair.as_span().end_pos().line_col().0;
-                    codes.push(GrammarRule { is_comment: true, identifier: String::new(), modifier: String::new(), code: pair.as_str().to_string(), lines: (start, end) })
+                    let code = self.format_comment(pair);
+                    nodes.push(Node::Comment(code));
                 }
                 Rule::grammar_rule => match self.format_grammar_rule(pair) {
-                    Ok(rule) => codes.push(rule),
+                    Ok(node) => nodes.push(node),
                     Err(e) => return Err(e),
                 },
-                Rule::WHITESPACE => continue,
-                _ => return Err(Unreachable(unreachable_rule!())),
+                Rule::grammar_doc => {
+                    let code = self.format_line_doc(pair, "//!");
+                    nodes.push(Node::LineDoc(code));
+                }
+                _ => nodes.push(Node::Str(pair.as_str().to_string())),
             };
+
+            if let Some(next) = pairs.peek() {
+                self.consume_newline(&mut nodes, (span.end(), next.as_span().start()))
+            }
         }
-        let mut last = 0 as usize;
+
+        // println!("------ nodes: {:?}", nodes);
+
+        let mut last = 0_usize;
         let mut group = vec![];
         let mut groups = vec![];
-        for i in codes {
-            let (s, e) = i.lines;
-            if last + 1 == s {
-                group.push(i)
-            }
-            else {
-                if group.len() != 0 {
-                    groups.push(group);
+        let mut nodes = nodes.iter().peekable();
+
+        let hardbreak = Node::Str("".to_string());
+
+        while let Some(node) = nodes.next() {
+            let next_node = nodes.peek();
+
+            match &node {
+                Node::Rule(rule) => {
+                    let (s, e) = rule.lines;
+                    if last + 1 == s {
+                        group.push(node);
+                    } else {
+                        if !group.is_empty() {
+                            groups.push(group);
+                        }
+                        group = vec![node];
+                    }
+                    last = e;
+
+                    if let Some(Node::LineDoc(_)) = next_node {
+                        group.push(&hardbreak);
+                    }
                 }
-                group = vec![i]
+                _ => {
+                    group.push(node);
+                }
             }
-            last = e
         }
         groups.push(group);
-        for g in groups {
-            let mut length = vec![];
-            for r in &g {
-                length.push(r.identifier.chars().count())
-            }
-            let max = length.iter().max().unwrap();
 
-            for r in &g {
-                code.push_str(&r.to_string(*max));
-                code.push_str("\n");
+        for group in groups {
+            let mut length = vec![];
+            let mut max = 0;
+            for r in &group {
+                if let Node::Rule(rule) = r {
+                    length.push(rule.identifier.chars().count());
+                    max = *length.iter().max().unwrap();
+                }
             }
-            code.push_str("\n");
+
+            code.push_str(&group.iter().map(|rule| rule.to_string(max)).collect::<Vec<_>>().join("\n"));
+            code.push('\n');
         }
-        return Ok(code);
+
+        // Remove leading and trailing whitespace
+        let out = code.trim().to_string();
+
+        Ok(out)
     }
-    fn format_grammar_rule(&self, pairs: Pair<Rule>) -> PestResult<GrammarRule> {
+
+    fn format_grammar_rule(&self, pairs: Pair<Rule>) -> PestResult<Node> {
         let mut code = String::new();
         let mut modifier = " ".to_string();
         let mut identifier = String::new();
@@ -94,32 +121,37 @@ impl Settings {
                 Rule::expression => match self.format_expression(pair) {
                     Ok(s) => {
                         if start == end {
-                            code = format!("{{{}}}", s.join("|"));
-                        }
-                        else if self.choice_first {
+                            code = format!("{{ {} }}", s.join(" | "));
+                        } else if self.choice_first {
                             code = format!("{{\n  {}}}", indent(&s.join("\n| "), self.indent - 2));
-                        }
-                        else {
+                        } else {
                             code = format!("{{\n{}}}", indent(&s.join(" |\n"), self.indent));
                         }
                     }
                     Err(e) => return Err(e),
                 },
+                Rule::line_doc => {
+                    return Ok(Node::LineDoc(self.format_line_doc(pair, "///")));
+                }
                 _ => (),
             };
         }
-        return Ok(GrammarRule { is_comment: false, identifier, modifier, code, lines: (start, end) });
+        Ok(Node::Rule(GrammarRule { is_raw: false, identifier, modifier, code, lines: (start, end) }))
     }
+
     fn format_expression(&self, pairs: Pair<Rule>) -> PestResult<Vec<String>> {
         let mut code = vec![];
         let mut term = String::new();
         for pair in pairs.into_inner() {
             match pair.as_rule() {
                 Rule::WHITESPACE => continue,
-                Rule::COMMENT => code.push(format_comment(pair)),
+                Rule::COMMENT => {
+                    let comment = self.format_comment(pair);
+                    term.push_str(&format!(" {}\n", &comment));
+                }
                 Rule::choice_operator => {
                     code.push(term.clone());
-                    term = String::new()
+                    term.clear();
                 }
                 Rule::sequence_operator => {
                     let joiner = format!("{0}~{0}", " ".repeat(self.sequence_space));
@@ -133,7 +165,7 @@ impl Settings {
             };
         }
         code.push(term.clone());
-        return Ok(code);
+        Ok(code)
     }
 
     fn format_term(&self, pairs: Pair<Rule>) -> PestResult<String> {
@@ -141,7 +173,10 @@ impl Settings {
         for pair in pairs.into_inner() {
             match pair.as_rule() {
                 Rule::WHITESPACE => continue,
-                Rule::COMMENT => code.push_str(&format_comment(pair)),
+                Rule::COMMENT => {
+                    let comment = &self.format_comment(pair);
+                    code.push_str(&format!(" {comment}\n"));
+                }
                 Rule::negative_predicate_operator => code.push_str(pair.as_str()),
                 Rule::positive_predicate_operator => code.push_str(pair.as_str()),
                 Rule::repeat_once_operator => code.push_str(pair.as_str()),
@@ -165,40 +200,32 @@ impl Settings {
                 Rule::expression => {
                     let e = self.format_expression(pair);
                     match e {
-                        Ok(expression) => {
-                            let joiner = format!("{0}|{0}", " ".repeat(self.choice_space));
-                            code.push_str(&expression.join(&joiner))
-                        }
+                        Ok(expression) => code.push_str(&expression.join(" | ")),
                         Err(e) => return Err(e),
                     }
                 }
                 Rule::_push => match self.format_term(pair) {
-                    Ok(string) => code.push_str(&string),
+                    Ok(string) => {
+                        code.push_str("PUSH");
+                        code.push_str(&string)
+                    }
+                    Err(e) => return Err(e),
+                },
+                Rule::peek_slice => match self.format_term(pair) {
+                    Ok(string) => {
+                        code.push_str("PEEK");
+                        code.push_str(&string)
+                    }
                     Err(e) => return Err(e),
                 },
                 Rule::repeat_min => code.push_str(&format_repeat_min_max(pair)?),
                 Rule::repeat_exact => code.push_str(&format_repeat_min_max(pair)?),
                 Rule::repeat_min_max => code.push_str(&format_repeat_min_max(pair)?),
-                _ => return Err(Unreachable(unreachable_rule!())),
+                _ => code.push_str(pair.as_str()),
             };
         }
-        return Ok(code);
+        Ok(code)
     }
-}
-
-fn format_comment(pairs: Pair<Rule>) -> String {
-    let mut code = String::new();
-    let raw = pairs.as_str();
-    if raw.starts_with("//") {
-        code.push_str("//");
-        code.push_str(raw[2..raw.len()].trim());
-        code.push('\n')
-    }
-    else {
-        // block comment
-        unimplemented!()
-    }
-    return code;
 }
 
 #[allow(dead_code)]
@@ -212,7 +239,7 @@ fn format_repeat_exact(pairs: Pair<Rule>) -> String {
             _ => unreachable!(),
         };
     }
-    return code;
+    code
 }
 
 fn format_repeat_min_max(pairs: Pair<Rule>) -> PestResult<String> {
@@ -227,5 +254,70 @@ fn format_repeat_min_max(pairs: Pair<Rule>) -> PestResult<String> {
             _ => return Err(Unreachable(unreachable_rule!())),
         };
     }
-    return Ok(code);
+    Ok(code)
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn test_basic() {
+        expect_correction! {
+            r#"a = @ { "a"}"#,
+            r#"a = @{ "a" }"#,
+        };
+
+        expect_correction! {
+            r#"a = _{^  "e"~("+"|"-")  ? ~ ASCII_DIGIT+ }"#,
+            r#"a = _{ ^"e" ~ ("+" | "-")? ~ ASCII_DIGIT+ }"#,
+        };
+
+        expect_correction! {
+            r#"
+            a ={ "a"}
+                b = {a ~ "b"}
+            "#,
+            r#"
+            a = { "a" }
+            b = { a ~ "b" }
+            "#,
+        };
+    }
+
+    #[test]
+    fn test_stack() {
+        expect_correction! {
+            r#"
+            a = ${PUSH(^"a"  )  ~ (!(NEWLINE|PEEK)~ ANY)+ ~ POP }
+            "#,
+            r#"
+            a = ${ PUSH(^"a") ~ (!(NEWLINE | PEEK) ~ ANY)+ ~ POP }
+            "#,
+        }
+    }
+
+    #[test]
+    fn test_group_assigns() {
+        expect_correction! {
+            r#"
+            a1 = {"A"}
+            foo_bar_dar = @{"A"}
+            a2 = _{"A"}
+
+            b1 = {"b"}
+            b1_b1 = ${"b1"}
+            // comment
+            c1 = { "c" }
+            "#,
+            r#"
+            a1          = { "A" }
+            foo_bar_dar = @{ "A" }
+            a2          = _{ "A" }
+
+            b1    = { "b" }
+            b1_b1 = ${ "b1" }
+            // comment
+            c1 = { "c" }
+            "#
+        }
+    }
 }

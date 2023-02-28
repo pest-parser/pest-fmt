@@ -1,126 +1,58 @@
+# Pest Formatter
+
+[![Test](https://github.com/pest-parser/pest-fmt/actions/workflows/test.yml/badge.svg)](https://github.com/pest-parser/pest-fmt/actions/workflows/test.yml)
+
+Pest Formatter is a tool to format [Pest](https://pest.rs) grammar files.
+
+## Installation
+
+```bash
+cargo install pest_fmt
+```
+
+## Usage
+
+Then use the `pestfmt` command to format your `.pest` files.
+
+```shell
+pestfmt .
+```
+
+It will find all `.pest` files in the current directory and format them.
+
+Output:
+
+```
 Pest Formatter
-==============
-
-Try Online: [PlayGround](https://sbeckeriv.github.io/pest_format/)
-
-
-### Configs
-
-#### pest_indent: usize
-
-- 4(default)
-
-```pest
-rule = {
-    token1
-  | token2
-}
-rule2 = {
-    token1 |
-    token2
-}
+-------------------------------------
+2 files formatted.
 ```
 
-- 2
+## Usage as a library
 
-```pest
-rule1 = {
-  token1
-| token2
-}
-rule2 = {
-  token1 |
-  token2
-}
+Add `pest_fmt` into your `Cargo.toml`:
+
+```
+cargo add pest_fmt
 ```
 
-- 0
+Then use the `Formatter` struct to format pest grammar.
 
-```pest
-rule1 = {
-  token1
-| token2
-}
-rule2 = {
-token1 |
-token2
-}
+```rust
+use pest_fmt::Formatter;
+
+let mut fmt = Formatter::new("a={ASCII_DIGIT}");
+let out = fmt.format().unwrap();
+println!("{out}");
+// a = { ASCII_DIGIT }
 ```
 
-#### pest_choice_first: bool
+## Development Tool Integration
 
-- true(default)
+### VS Code
 
-```pest
-rule = {
-    token1
-  | token2
-}
-```
+https://github.com/pest-parser/pest-ide-tools
 
-- false
+## License
 
-```pest
-rule = {
-    token1 |
-    token2
-}
-```
-
-#### pest_choice_hanging: bool
-
-`pest_indent` & `pest_choice_first` will be disabled
-
-- true
-
-```pest
-rule = !
-       { token1
-       | token2
-       }
-```
-
-- false(default)
-
-#### pest_braces_space: usize
-
-- 0(default)
-
-```pest
-rule = {token}
-```
-
-- 1
-
-```pest
-rule = { token }
-```
-
-#### pest_parentheses_space: usize
-
-- 0(default)
-
-```pest
-rule = {(token)}
-```
-
-- 1
-
-```pest
-rule = {( token )}
-```
-
-
-#### pest_choice_space: usize
-
-- 0(default)
-
-```pest
-rule = {token1|token2}
-```
-
-- 1
-
-```pest
-rule = {token1 | token2}
-```
+Mozilla Public License 2.0
