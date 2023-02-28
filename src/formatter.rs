@@ -33,10 +33,7 @@ impl Formatter<'_> {
                     Ok(node) => nodes.push(node),
                     Err(e) => return Err(e),
                 },
-                Rule::grammar_doc => {
-                    let code = self.format_line_doc(pair, "//!");
-                    nodes.push(Node::LineDoc(code));
-                }
+                Rule::grammar_doc => nodes.push(Node::LineDoc(self.format_line_doc(pair, "//!"))),
                 _ => nodes.push(Node::Str(pair.as_str().to_string())),
             };
 
@@ -101,13 +98,15 @@ impl Formatter<'_> {
         Ok(out)
     }
 
-    fn format_grammar_rule(&self, pairs: Pair<Rule>) -> PestResult<Node> {
+    fn format_grammar_rule(&self, pair: Pair<Rule>) -> PestResult<Node> {
         let mut code = String::new();
         let mut modifier = " ".to_string();
         let mut identifier = String::new();
-        let start = pairs.as_span().start_pos().line_col().0;
-        let end = pairs.as_span().end_pos().line_col().0;
-        for pair in pairs.into_inner() {
+
+        let start_line = pair.as_span().start_pos().line_col().0;
+        let end_line = pair.as_span().end_pos().line_col().0;
+
+        for pair in pair.into_inner() {
             match pair.as_rule() {
                 Rule::WHITESPACE => continue,
                 Rule::assignment_operator => continue,
@@ -119,13 +118,11 @@ impl Formatter<'_> {
                 Rule::non_atomic_modifier => modifier = pair.as_str().to_string(),
                 Rule::compound_atomic_modifier => modifier = pair.as_str().to_string(),
                 Rule::expression => match self.format_expression(pair) {
-                    Ok(s) => {
-                        if start == end {
-                            code = format!("{{ {} }}", s.join(" | "));
-                        } else if self.choice_first {
-                            code = format!("{{\n  {}}}", indent(&s.join("\n| "), self.indent - 2));
+                    Ok(parts) => {
+                        if start_line == end_line {
+                            code = format!("{{ {} }}", parts.join(" | "));
                         } else {
-                            code = format!("{{\n{}}}", indent(&s.join(" |\n"), self.indent));
+                            code = format!("{{\n  {}}}", indent(parts.join("\n| "), 2));
                         }
                     }
                     Err(e) => return Err(e),
@@ -133,10 +130,10 @@ impl Formatter<'_> {
                 Rule::line_doc => {
                     return Ok(Node::LineDoc(self.format_line_doc(pair, "///")));
                 }
-                _ => (),
+                _ => {}
             };
         }
-        Ok(Node::Rule(GrammarRule { is_raw: false, identifier, modifier, code, lines: (start, end) }))
+        Ok(Node::Rule(GrammarRule { is_raw: false, identifier, modifier, code, lines: (start_line, end_line) }))
     }
 
     fn format_expression(&self, pairs: Pair<Rule>) -> PestResult<Vec<String>> {
@@ -147,15 +144,22 @@ impl Formatter<'_> {
                 Rule::WHITESPACE => continue,
                 Rule::COMMENT => {
                     let comment = self.format_comment(pair);
-                    term.push_str(&format!(" {}\n", &comment));
+                    if !term.is_empty() {
+                        term.push(' ');
+                    }
+                    term.push_str(&comment);
+                    term.push('\n');
                 }
                 Rule::choice_operator => {
                     code.push(term.clone());
                     term.clear();
                 }
                 Rule::sequence_operator => {
-                    let joiner = format!("{0}~{0}", " ".repeat(self.sequence_space));
-                    term.push_str(&joiner)
+                    if !term.ends_with('\n') {
+                        term.push(' ')
+                    }
+                    term.push('~');
+                    term.push(' ')
                 }
                 Rule::term => match self.format_term(pair) {
                     Ok(string) => term.push_str(&string),
@@ -174,8 +178,12 @@ impl Formatter<'_> {
             match pair.as_rule() {
                 Rule::WHITESPACE => continue,
                 Rule::COMMENT => {
-                    let comment = &self.format_comment(pair);
-                    code.push_str(&format!(" {comment}\n"));
+                    let comment = self.format_comment(pair);
+                    if !code.ends_with('\n') {
+                        code.push(' ')
+                    }
+                    code.push_str(&comment);
+                    code.push('\n');
                 }
                 Rule::negative_predicate_operator => code.push_str(pair.as_str()),
                 Rule::positive_predicate_operator => code.push_str(pair.as_str()),
