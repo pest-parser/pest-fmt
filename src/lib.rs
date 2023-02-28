@@ -6,13 +6,31 @@ extern crate proc_macro;
 #[cfg(test)]
 extern crate quote;
 
+#[cfg(test)]
+macro_rules! expect_correction {
+    ($source:expr, $expected:expr,) => {
+        let source = indoc::indoc! { $source };
+        let expected = indoc::indoc! { $expected };
+
+        let fmt = crate::Formatter::new(source);
+
+        pretty_assertions::assert_eq!(fmt.format().unwrap().trim_end(), expected.trim_end())
+    };
+    ($source:expr, $expected:expr) => {
+        expect_correction!($source, $expected,)
+    };
+}
+
 #[macro_use]
+
 mod error;
+mod comment;
 pub mod formatter;
-pub mod utils;
+mod newline;
+mod node;
 
 pub use error::{PestError, PestResult};
-use utils::GrammarRule;
+pub(crate) use node::*;
 
 pub struct Formatter<'a> {
     input: &'a str,
@@ -41,24 +59,5 @@ impl<'a> Formatter<'a> {
         }
 
         &self.input[start..end]
-    }
-}
-
-#[derive(Debug, Clone)]
-enum Node {
-    Rule(GrammarRule),
-    Comment(String),
-    LineDoc(String),
-    Str(String),
-}
-
-impl Node {
-    fn to_string(&self, indent: usize) -> String {
-        match self {
-            Node::Rule(rule) => rule.to_string(indent),
-            Node::Comment(c) => c.to_owned(),
-            Node::LineDoc(c) => c.to_owned(),
-            Node::Str(c) => c.to_owned(),
-        }
     }
 }

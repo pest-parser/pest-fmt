@@ -1,22 +1,26 @@
-use pest::Span;
 use std::fmt::{Debug, Error};
 
-pub fn is_one_line(span: Span) -> bool {
-    let s = span.start_pos().line_col().0;
-    let e = span.end_pos().line_col().0;
-
-    s == e
+#[derive(Debug, Clone)]
+pub(crate) enum Node {
+    Rule(GrammarRule),
+    Comment(String),
+    LineDoc(String),
+    Str(String),
 }
 
-pub fn get_lines(span: Span) -> (usize, usize) {
-    let s = span.start_pos().line_col().0;
-    let e = span.end_pos().line_col().0;
-
-    (s, e)
+impl Node {
+    pub(crate) fn to_string(&self, indent: usize) -> String {
+        match self {
+            Node::Rule(rule) => rule.to_string(indent),
+            Node::Comment(c) => c.to_owned(),
+            Node::LineDoc(c) => c.to_owned(),
+            Node::Str(c) => c.to_owned(),
+        }
+    }
 }
 
 #[derive(Clone)]
-pub struct GrammarRule {
+pub(crate) struct GrammarRule {
     pub is_raw: bool,
     pub identifier: String,
     pub modifier: String,
@@ -25,11 +29,7 @@ pub struct GrammarRule {
 }
 
 impl GrammarRule {
-    pub fn raw(c: &str, lines: (usize, usize)) -> Self {
-        GrammarRule { is_raw: true, identifier: "".to_string(), modifier: "".to_string(), code: c.to_string(), lines }
-    }
-
-    pub fn to_string(&self, indent: usize) -> String {
+    pub(crate) fn to_string(&self, indent: usize) -> String {
         if self.is_raw {
             return self.code.clone();
         }

@@ -1,4 +1,4 @@
-use crate::{error::PestError::Unreachable, utils::GrammarRule, Formatter, Node, PestError, PestResult};
+use crate::{error::PestError::Unreachable, Formatter, GrammarRule, Node, PestError, PestResult};
 use pest::iterators::Pair;
 use pest::Parser;
 use pest_derive::Parser;
@@ -22,7 +22,7 @@ impl Formatter<'_> {
         let mut nodes = vec![];
 
         while let Some(pair) = pairs.next() {
-            let pair_span = pair.as_span();
+            let span = pair.as_span();
 
             match pair.as_rule() {
                 Rule::COMMENT => {
@@ -40,21 +40,8 @@ impl Formatter<'_> {
                 _ => nodes.push(Node::Str(pair.as_str().to_string())),
             };
 
-            // If match the text containes "\n" between current pair and next pair, then push a new line
-            // For example:
-            //
-            // 1. `a = { "a" }\nb = { "b" }` => `a = { "a" }\nb = { "b" }`
-            // 2. `a = { "a" }\n\nb = { "b" }` => `a = { "a" }\n\nb = { "b" }`
-            // 3. `a = { "a" }\n\n\nb = { "b" }` => `a = { "a" }\n\nb = { "b" }`
-            if let Some(next_pair) = pairs.peek() {
-                let last_node_str = nodes.iter().last().map(|n| n.to_string(0)).unwrap_or("".into());
-                if !last_node_str.ends_with('\n') {
-                    let between_str = self.get_str((pair_span.end(), next_pair.as_span().start()));
-                    // If there have at least 2 "\n" then push a new line
-                    if between_str.matches('\n').count() >= 2 {
-                        nodes.push(Node::Str("".to_string()));
-                    }
-                }
+            if let Some(next) = pairs.peek() {
+                self.consume_newline(&mut nodes, (span.end(), next.as_span().start()))
             }
         }
 
@@ -239,41 +226,6 @@ impl Formatter<'_> {
         }
         Ok(code)
     }
-
-    fn format_comment(&self, pairs: Pair<Rule>) -> String {
-        let mut code = String::new();
-        let raw = pairs.as_str().trim();
-
-        if raw.starts_with("//") {
-            code.push_str("// ");
-            code.push_str(raw[2..raw.len()].trim());
-        } else if raw.starts_with("/*") {
-            let raw = raw.trim_start_matches("/*").trim_end_matches("*/").trim();
-
-            let comment_lines = raw.split('\n');
-            let comment_lines: Vec<String> = comment_lines.map(|c| c.trim().to_string()).collect();
-
-            code = if comment_lines.len() == 1 {
-                /* Foo */
-                format!("/* {} */", comment_lines.join("").trim())
-            } else {
-                /*
-                  Foo
-                */
-                format!("/*\n{}\n*/", indent(comment_lines.join("\n"), self.indent))
-            };
-        } else {
-            unreachable!()
-        }
-        code
-    }
-
-    fn format_line_doc(&self, pairs: Pair<Rule>, prefix: &str) -> String {
-        let raw = pairs.as_str();
-        let code = format!("{} {}", prefix, raw.trim_start_matches(prefix).trim());
-
-        code.trim().to_string()
-    }
 }
 
 #[allow(dead_code)]
@@ -307,22 +259,6 @@ fn format_repeat_min_max(pairs: Pair<Rule>) -> PestResult<String> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
-    macro_rules! expect_correction {
-        ($source:expr, $expected:expr,) => {
-            let source = indoc::indoc! { $source };
-            let expected = indoc::indoc! { $expected };
-
-            let fmt = Formatter::new(source);
-
-            assert_eq!(fmt.format().unwrap().trim_end(), expected.trim_end())
-        };
-        ($source:expr, $expected:expr) => {
-            expect_correction!($source, $expected,)
-        };
-    }
-
     #[test]
     fn test_basic() {
         expect_correction! {
@@ -348,49 +284,6 @@ mod tests {
     }
 
     #[test]
-    fn test_comment() {
-        expect_correction! {
-            r#"
-              //comment1
-            //comment2
-            a = { "a" }
-            "#,
-            r#"
-            // comment1
-            // comment2
-            a = { "a" }
-            "#,
-        };
-
-        expect_correction! {
-            r#"
-            ///comment1
-                ///comment2
-            a = { "a" }
-            ///comment3
-            "#,
-            r#"
-            /// comment1
-            /// comment2
-            a = { "a" }
-            
-            /// comment3
-            "#,
-        };
-
-        expect_correction! {
-            r#"
-            //!comment1
-                //!comment2
-            a = { "a" }"#,
-            r#"
-            //! comment1
-            //! comment2
-            a = { "a" }"#,
-        };
-    }
-
-    #[test]
     fn test_stack() {
         expect_correction! {
             r#"
@@ -398,33 +291,6 @@ mod tests {
             "#,
             r#"
             a = ${ PUSH(^"a") ~ (!(NEWLINE | PEEK) ~ ANY)+ ~ POP }
-            "#,
-        }
-    }
-
-    #[test]
-    fn test_keep_exist_newline() {
-        expect_correction! {
-            r#"
-            a = { "a" }
-
-            b = { "b" }
-            
-            
-            c = { "c" }
-            d = { "d" }
-            // This is comment
-            e = { "e" }
-            "#,
-            r#"
-            a = { "a" }
-
-            b = { "b" }
-            
-            c = { "c" }
-            d = { "d" }
-            // This is comment
-            e = { "e" }
             "#,
         }
     }
