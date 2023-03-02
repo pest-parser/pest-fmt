@@ -25,7 +25,7 @@ impl Formatter<'_> {
                 /*
                   Foo
                 */
-                format!("/*\n{}\n*/", indent(comment_lines.join("\n"), self.indent))
+                format!("/*\n{}*/", indent(comment_lines.join("\n"), self.indent))
             };
         } else {
             unreachable!()
@@ -113,6 +113,30 @@ mod tests {
               // comment4
               ~ "d"
             }"#,
+        };
+    }
+
+    #[test]
+    fn test_block_comment() {
+        expect_correction! {
+            r#"
+            /*comment1*/
+            a = { "a" }
+            
+            /*comment1
+            comment2*/
+            b = { "b" }
+            "#,
+            r#"
+            /* comment1 */
+            a = { "a" }
+
+            /*
+                comment1
+                comment2
+            */
+            b = { "b" }
+            "#,
         };
     }
 }
