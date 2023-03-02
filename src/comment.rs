@@ -61,6 +61,20 @@ mod tests {
 
         expect_correction! {
             r#"
+            //!comment1
+                //!comment2
+            a = { "a" }"#,
+            r#"
+            //! comment1
+            //! comment2
+            a = { "a" }"#,
+        };
+    }
+
+    #[test]
+    fn test_comment_keep_newline() {
+        expect_correction! {
+            r#"
             ///comment1
                 ///comment2
             a = { "a" }
@@ -74,16 +88,31 @@ mod tests {
             /// comment3
             "#,
         };
+    }
 
+    #[test]
+    fn test_comment_in_expr() {
         expect_correction! {
             r#"
-            //!comment1
-                //!comment2
-            a = { "a" }"#,
+            //comment0
+            a = { "a" // comment1
+                 ~ 
+                 "b" //comment2
+                 //comment2.1
+            ~ "c" //comment3
+            //comment4
+            ~ "d"
+            }"#,
             r#"
-            //! comment1
-            //! comment2
-            a = { "a" }"#,
+            // comment0
+            a = {
+                "a" // comment1
+              ~ "b" // comment2
+              // comment2.1
+              ~ "c" // comment3
+              // comment4
+              ~ "d"
+            }"#,
         };
     }
 }

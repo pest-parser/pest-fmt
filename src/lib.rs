@@ -37,14 +37,12 @@ pub struct Formatter<'a> {
 
     /// Indent space size
     indent: usize,
-    choice_first: bool,
-    sequence_space: usize,
 }
 
 impl<'a> Formatter<'a> {
     /// Create new formatter
     pub fn new(input: &'a str) -> Formatter<'a> {
-        Self { input, indent: 4, choice_first: true, sequence_space: 1 }
+        Self { input, indent: 4 }
     }
 
     /// Returns the str of the range in self.input, return empty str if the
