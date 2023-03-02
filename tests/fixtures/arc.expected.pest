@@ -8,7 +8,7 @@ statement  = _{
   | list_scope
 }
 empty_line = _{ WHITESPACE* ~ NEWLINE }
-RestOfLine = { (!NEWLINE ~ ANY)* }
+RestOfLine =  { (!NEWLINE ~ ANY)* }
 /* ==================================================================================================================== */
 dict_scope = { dict_head ~ (SEPARATOR? ~ dict_pair)* }
 dict_empty = { "{" ~ "}" }
@@ -57,17 +57,17 @@ SignedNumber = ${ Sign? ~ (Decimal | Integer) }
 Decimal      = ${ Integer ~ Dot ~ ASCII_DIGIT+ }
 DecimalBad   = ${ Integer ~ Dot | Dot ~ ASCII_DIGIT+ }
 Integer      = @{ Zero | ASCII_NONZERO_DIGIT ~ (Underline? ~ ASCII_DIGIT)* }
-Complex      = { SignedNumber ~ SYMBOL }
+Complex      =  { SignedNumber ~ SYMBOL }
 Zero         = _{ "0" }
 /* ==================================================================================================================== */
 /// #3C963C: String
 /// #98C379: StringText|StringLiteralText
-String            = { SYMBOL? ~ (StringNormal | StringLines | StringCharacter) }
-StringLines       = { (Accent ~ RestOfLine?)+ }
-StringCharacter   = { Apostrophe ~ StringLiteralText ~ Apostrophe }
-StringNormal      = { Quotation ~ StringText ~ Quotation }
-StringLiteralText = { (Escape ~ (Escape | Apostrophe) | !Apostrophe ~ ANY)* }
-StringText        = { (Escape ~ (Escape | Quotation) | !Quotation ~ ANY)* }
+String            =  { SYMBOL? ~ (StringNormal | StringLines | StringCharacter) }
+StringLines       =  { (Accent ~ RestOfLine?)+ }
+StringCharacter   =  { Apostrophe ~ StringLiteralText ~ Apostrophe }
+StringNormal      =  { Quotation ~ StringText ~ Quotation }
+StringLiteralText =  { (Escape ~ (Escape | Apostrophe) | !Apostrophe ~ ANY)* }
+StringText        =  { (Escape ~ (Escape | Quotation) | !Quotation ~ ANY)* }
 Accent            = @{ "`" }
 Apostrophe        = @{ "'" }
 Quotation         = @{ "\"" }
@@ -75,13 +75,13 @@ Escape            = @{ "\\" }
 /* ==================================================================================================================== */
 /// #61AFEF
 NameSpace = @{ Key ~ (Dot ~ Key)* }
-Key       = { String | SYMBOL | Integer }
+Key       =  { String | SYMBOL | Integer }
 SYMBOL    = @{ XID_CONTINUE+ }
 /* ==================================================================================================================== */
 // NEWLINE = @{"\r" ~ "\n"|"\r"|"\n"}
 /// Gray
-COMMENT          = { MultiLineComment | LineComment }
-WHITESPACE       = { NEWLINE | SPACE_SEPARATOR | "\t" }
+COMMENT          =  { MultiLineComment | LineComment }
+WHITESPACE       =  { NEWLINE | SPACE_SEPARATOR | "\t" }
 LineComment      = ${ "%" ~ (!NEWLINE ~ ANY)* }
 MultiLineComment = ${ "%%%" ~ (MultiLineComment | !"%%%" ~ ANY)* ~ "%%%" }
 Cite             = @{ "$" }

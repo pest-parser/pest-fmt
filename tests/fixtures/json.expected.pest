@@ -10,7 +10,7 @@ pair   = { string ~ ":" ~ value }
 array  = { "[" ~ value ~ ("," ~ value)* ~ "]" | "[" ~ "]" }
 
 /* Match value */
-value  = { string | number | object | array | bool | null }
+value  =  { string | number | object | array | bool | null }
 string = @{ PUSH("\"") ~ inner ~ POP }
 inner  = @{ (!(PEEK | "\\") ~ ANY)* ~ (escape ~ inner)? }
 
@@ -23,6 +23,6 @@ unicode = @{ "u" ~ ASCII_HEX_DIGIT{4} }
 number     = @{ "-"? ~ int ~ ("." ~ ASCII_DIGIT+ ~ exp? | exp)? }
 int        = @{ "0" | ASCII_NONZERO_DIGIT ~ ASCII_DIGIT* }
 exp        = @{ ("E" | "e") ~ ("+" | "-")? ~ ASCII_DIGIT+ }
-bool       = { "true" | "false" }
-null       = { "null" }
+bool       =  { "true" | "false" }
+null       =  { "null" }
 WHITESPACE = _{ " " | "\t" | "\r" | "\n" }

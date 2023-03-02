@@ -18,7 +18,6 @@ impl Formatter<'_> {
         }
         .peekable();
 
-        let mut code = String::new();
         let mut nodes = vec![];
 
         while let Some(pair) = pairs.next() {
@@ -42,18 +41,21 @@ impl Formatter<'_> {
             }
         }
 
-        // println!("------ nodes: {:?}", nodes);
+        Ok(self.group_output(nodes))
+    }
 
-        let mut last = 0_usize;
-        let mut group = vec![];
-        let mut groups = vec![];
-        let mut nodes = nodes.iter().peekable();
+    fn group_output(&self, nodes: Vec<Node>) -> String {
+        // println!("------ nodes: {:?}", nodes);
 
         let hardbreak = Node::Str("".to_string());
 
-        while let Some(node) = nodes.next() {
-            let next_node = nodes.peek();
+        let mut groups = vec![];
+        let mut nodes = nodes.iter().peekable();
 
+        // Iterate all nodes and group consecutive rules into a group.
+        let mut last = 0_usize;
+        let mut group = vec![];
+        while let Some(node) = nodes.next() {
             match &node {
                 Node::Rule(rule) => {
                     let (s, e) = rule.lines;
@@ -67,7 +69,7 @@ impl Formatter<'_> {
                     }
                     last = e;
 
-                    if let Some(Node::LineDoc(_)) = next_node {
+                    if let Some(Node::LineDoc(_)) = nodes.peek() {
                         group.push(&hardbreak);
                     }
                 }
@@ -78,24 +80,50 @@ impl Formatter<'_> {
         }
         groups.push(group);
 
-        for group in groups {
+        // Iterate all groups, output as string, and add \n after each groups.
+        let mut output = String::new();
+        for nodes in groups {
             let mut length = vec![];
             let mut max = 0;
-            for r in &group {
-                if let Node::Rule(rule) = r {
+            let mut has_modifier = false;
+
+            // Iterate nodes first to know the indent size
+            for node in &nodes {
+                if let Node::Rule(rule) = node {
+                    // To get max length of the identifiers, as the indent size.
                     length.push(rule.identifier.chars().count());
                     max = *length.iter().max().unwrap();
+
+                    // Check if there is any modifier (@, _, !, $).
+                    // If exists, we need to keep a space before `{` to let rules in a group in tidy.
+                    if !rule.modifier.is_empty() && rule.modifier != " " {
+                        has_modifier = true;
+                    }
                 }
             }
 
-            code.push_str(&group.iter().map(|rule| rule.to_string(max)).collect::<Vec<_>>().join("\n"));
-            code.push('\n');
+            // Build final code for each group
+            let mut line_codes = vec![];
+            for node in &nodes {
+                if let Node::Rule(rule) = node {
+                    let mut rule = rule.clone();
+                    // If this group not have modifier, we need to trim the modifier to avoid
+                    if !has_modifier {
+                        rule.modifier = rule.modifier.trim().to_owned();
+                    }
+
+                    line_codes.push(rule.to_string(max));
+                } else {
+                    line_codes.push(node.to_string(max));
+                }
+            }
+
+            output.push_str(&line_codes.join("\n"));
+            output.push('\n');
         }
 
         // Remove leading and trailing whitespace
-        let out = code.trim().to_string();
-
-        Ok(out)
+        output.trim().to_string()
     }
 
     fn format_grammar_rule(&self, pair: Pair<Rule>) -> PestResult<Node> {
@@ -133,7 +161,7 @@ impl Formatter<'_> {
                 _ => {}
             };
         }
-        Ok(Node::Rule(GrammarRule { is_raw: false, identifier, modifier, code, lines: (start_line, end_line) }))
+        Ok(Node::Rule(GrammarRule { identifier, modifier, code, lines: (start_line, end_line) }))
     }
 
     fn format_expression(&self, pairs: Pair<Rule>) -> PestResult<Vec<String>> {
@@ -306,26 +334,46 @@ mod tests {
     #[test]
     fn test_group_assigns() {
         expect_correction! {
-            r#"
-            a1 = {"A"}
-            foo_bar_dar = @{"A"}
-            a2 = _{"A"}
+        r#"
+        a1 = {"A"}
+        foo_bar_dar = @{"A"}
+        a2 = _{"A"}
+        multi = {
+        "a"
+        | "b"
+        }
 
-            b1 = {"b"}
-            b1_b1 = ${"b1"}
-            // comment
-            c1 = { "c" }
-            "#,
-            r#"
-            a1          = { "A" }
-            foo_bar_dar = @{ "A" }
-            a2          = _{ "A" }
+        b1 = {"b"}
+        b1_b1 = ${"b1"}
+        // comment
+        c1 = { "c" }
 
-            b1    = { "b" }
-            b1_b1 = ${ "b1" }
-            // comment
-            c1 = { "c" }
-            "#
+        d0 = {"d"}
+        d01 = {"d1"}
+
+        e0 = {"e"}
+        e01 = !{"e1"}
+        "#,
+        r#"
+        a1          =  { "A" }
+        foo_bar_dar = @{ "A" }
+        a2          = _{ "A" }
+        multi       =  {
+            "a"
+          | "b"
+        }
+
+        b1    =  { "b" }
+        b1_b1 = ${ "b1" }
+        // comment
+        c1 = { "c" }
+
+        d0  = { "d" }
+        d01 = { "d1" }
+
+        e0  =  { "e" }
+        e01 = !{ "e1" }
+        "#
         }
     }
 }
