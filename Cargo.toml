@@ -17,6 +17,7 @@ text-utils = "0.2"
 toml = "0.5"
 
 [dev-dependencies]
+criterion = "0.4.0"
 indoc = "2"
 pretty_assertions = "1.3.0"
 quote = "1.0"
@@ -24,3 +25,7 @@ quote = "1.0"
 [[bin]]
 name = "pestfmt"
 path = "src/main.rs"
+
+[[bench]]
+harness = false
+name = "format"

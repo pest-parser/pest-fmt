@@ -53,6 +53,15 @@ println!("{out}");
 
 https://github.com/pest-parser/pest-ide-tools
 
+## Benchmark
+
+Based on MacBook Pro (Apple M1 2020)
+
+```
+format (json.pest)                time:   [89.403 µs 89.632 µs 89.878 µs]
+format (grammar.pest)             time:   [1.6018 ms 1.6054 ms 1.6105 ms]
+```
+
 ## License
 
 Mozilla Public License 2.0
