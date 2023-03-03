@@ -27,7 +27,7 @@ log_line2 = {
 }
 
 log_line3 = {
-  // lead comment
+    // lead comment
     "1" ~ ("2" // another comment
   | "3" // longer comment
   | "4" // final comment

@@ -154,8 +154,8 @@ impl Formatter<'_> {
                             code.push(' ');
                         } else {
                             code.push_str("\n  ");
-                            let mut expr_code = parts.join("\n| ");
 
+                            let mut expr_code = parts.join("\n| ");
                             // Remove leading whitespace: " |" to "|"
                             expr_code = expr_code.split('\n').map(|part| part.trim()).collect::<Vec<_>>().join("\n");
 
@@ -170,7 +170,8 @@ impl Formatter<'_> {
                     if start_line == end_line {
                         code.push(' ');
                     } else {
-                        code.push_str("\n  ");
+                        code.push('\n');
+                        code.push_str(&" ".repeat(4));
                     }
 
                     code.push_str(&comment);
