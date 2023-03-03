@@ -21,24 +21,26 @@ impl Node {
 
 #[derive(Clone)]
 pub(crate) struct GrammarRule {
-    pub is_raw: bool,
+    /// Rule identifier
     pub identifier: String,
+    /// Modifier `!`, `@`, `_` and ` `
     pub modifier: String,
+    /// Expression code
     pub code: String,
+    /// (start_line, end_line)
     pub lines: (usize, usize),
 }
 
 impl GrammarRule {
     pub(crate) fn to_string(&self, indent: usize) -> String {
-        if self.is_raw {
-            return self.code.clone();
-        }
         let mut code = self.identifier.clone();
+
         while code.chars().count() < indent {
             code.push(' ')
         }
         code.push_str(" = ");
-        code.push_str(self.modifier.trim());
+
+        code.push_str(&self.modifier);
         code.push_str(&self.code);
 
         code
