@@ -9,6 +9,15 @@ blah      = {
     ("w") ~ &("z")
 }
 
+complex_expr = _{
+    "a"
+  | "b" ~ ("b1" | "b2" ~ "b3" | "b4")
+  | "c"
+  | "d" ~ "d1"
+  | "e"
+  | "f"
+}
+
 // https://github.com/pest-parser/pest-fmt/issues/15
 log_line1 = {
     "0" ~ ("1" // a comment

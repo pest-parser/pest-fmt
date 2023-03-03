@@ -17,9 +17,12 @@ macro_rules! assert_format {
 #[test]
 #[cfg(not(target_os = "windows"))]
 fn test_files() {
-    assert_format!("fixtures/json.actual.pest", "fixtures/json.expected.pest");
-    assert_format!("fixtures/arc.actual.pest", "fixtures/arc.expected.pest");
     assert_format!("fixtures/bad_cases.actual.pest", "fixtures/bad_cases.expected.pest");
+    assert_format!("fixtures/arc.actual.pest", "fixtures/arc.expected.pest");
+    assert_format!("fixtures/json.actual.pest", "fixtures/json.expected.pest");
     assert_format!("fixtures/pest.actual.pest", "fixtures/pest.expected.pest");
     assert_format!("fixtures/valkyrie.actual.pest", "fixtures/valkyrie.expected.pest");
+    assert_format!("fixtures/graphql.actual.pest", "fixtures/graphql.expected.pest");
+    assert_format!("fixtures/move.actual.pest", "fixtures/move.expected.pest");
+    assert_format!("fixtures/vector.actual.pest", "fixtures/vector.expected.pest");
 }
