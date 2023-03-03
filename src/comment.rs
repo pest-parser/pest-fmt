@@ -94,6 +94,20 @@ mod tests {
     fn test_comment_in_expr() {
         expect_correction! {
             r#"
+            a = { // this will miss
+              "a"
+              }
+            "#,
+            r#"
+            a = {
+                // this will miss
+                "a"
+            }
+            "#
+        }
+
+        expect_correction! {
+            r#"
             //comment0
             a = { "a" // comment1
                  ~ 
