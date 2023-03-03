@@ -128,6 +128,7 @@ impl Formatter<'_> {
 
     fn format_grammar_rule(&self, pair: Pair<Rule>) -> PestResult<Node> {
         let mut code = String::new();
+        code.push('{');
         let mut modifier = " ".to_string();
         let mut identifier = String::new();
 
@@ -148,19 +149,40 @@ impl Formatter<'_> {
                 Rule::expression => match self.format_expression(pair) {
                     Ok(parts) => {
                         if start_line == end_line {
-                            code = format!("{{ {} }}", parts.join(" | "));
+                            code.push(' ');
+                            code.push_str(&parts.join(" | "));
+                            code.push(' ');
                         } else {
-                            code = format!("{{\n  {}}}", indent(parts.join("\n| "), 2));
+                            code.push_str("\n  ");
+                            let mut expr_code = parts.join("\n| ");
+
+                            // Remove leading whitespace: " |" to "|"
+                            expr_code = expr_code.split('\n').map(|part| part.trim()).collect::<Vec<_>>().join("\n");
+
+                            code.push_str(&indent(expr_code, 2));
                         }
                     }
                     Err(e) => return Err(e),
                 },
+                Rule::COMMENT => {
+                    let comment = self.format_comment(pair);
+
+                    if start_line == end_line {
+                        code.push(' ');
+                    } else {
+                        code.push_str("\n  ");
+                    }
+
+                    code.push_str(&comment);
+                }
                 Rule::line_doc => {
                     return Ok(Node::LineDoc(self.format_line_doc(pair, "///")));
                 }
-                _ => {}
+                _ => return Err(Unreachable(unreachable_rule!())),
             };
         }
+
+        code.push('}');
         Ok(Node::Rule(GrammarRule { identifier, modifier, code, lines: (start_line, end_line) }))
     }
 
@@ -374,6 +396,31 @@ mod tests {
         e0  =  { "e" }
         e01 = !{ "e1" }
         "#
+        }
+    }
+
+    #[test]
+    fn test_choice_alignment() {
+        expect_correction! {
+            r#"
+            a = {
+            "0" ~ ( "0" //comment1
+            |  "0" // comment2
+            | "1" // comment3
+            | "2" //comment4
+            | "a" | "b" | "c" | "d" | "e")
+            }
+            "#,
+
+            r#"
+            a = {
+                "0" ~ ("0" // comment1
+              | "0" // comment2
+              | "1" // comment3
+              | "2" // comment4
+              | "a" | "b" | "c" | "d" | "e")
+            }
+            "#,
         }
     }
 }

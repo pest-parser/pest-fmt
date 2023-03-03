@@ -8,3 +8,39 @@ arguments = {
 blah = {
     ("w") ~ &("z")
 }
+
+// https://github.com/pest-parser/pest-fmt/issues/15
+log_line1 = {
+    "0" ~ (
+        "1"
+        // a comment
+        | "2"        // another comment
+        | "3"   // longer comment
+        | "4"
+        // final comment
+        | "a"
+        | "b"
+        | "c"
+        | "d"
+    ) 
+}
+
+log_line2 = {
+    "0" ~ ( "0" // a comment
+    |  "0" // another comment
+    | "1" // longer comment
+    | "2" // final comment
+    | "a" | "b" | "c" | "d" | "e")
+}
+
+log_line3 = {
+  // lead comment
+      "1" ~ ("2" 
+      // another comment
+     | "3" 
+     // longer comment
+     | "4" 
+     // final comment
+     | "5" 
+     | "a" | "b" | "c" | "d" | "e") // comment
+  }
