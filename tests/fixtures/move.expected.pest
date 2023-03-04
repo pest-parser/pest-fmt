@@ -1,0 +1,444 @@
+//! Move grammar
+//!
+//! Ref: https://github.com/victoryang00/move-fmt/blob/4e6e47adf766177f48387b4216f0b161f0bce937/src/grammar.pest
+//! Copyright (c) 2021 Yiwei Yang
+//!
+//! Licensed under the Apache License, Version 2.0
+//! <LICENSE-APACHE or http://www.apache.org/licenses/LICENSE-2.0> or the MIT
+//! license <LICENSE-MIT or http://opensource.org/licenses/MIT>, at your
+//! option. All files in the project carrying such notice may not be copied,
+//! modified, or distributed except according to those terms.
+
+grammar_rules = _{ SOI ~ grammar_rule ~ EOI }
+
+grammar_rule = { module_decl | transaction_script | move_script }
+
+line_terminator = _{ "\u{000A}" | "\u{000D}" | "\u{2028}" | "\u{2029}" }
+WHITESPACE      = _{
+    "\u{0009}"
+  | "\u{000B}"
+  | "\u{000C}"
+  | "\u{0020}"
+  | "\u{00A0}"
+  | "\u{FEFF}"
+  | SPACE_SEPARATOR
+  | line_terminator
+}
+COMMENT         = _{ "/*" ~ (!"*/" ~ ANY)* ~ "*/" | "//" ~ ANY* }
+
+alpha          = { 'a'..'z' | 'A'..'Z' }
+digit          = { '0'..'9' }
+ident          = { (alpha | digit | "$" | "_") ~ (alpha | digit | "$" | "_")* }
+field_name     = { ident }
+procedure_name = { ident }
+module_name    = { ident }
+struct_name    = { ident }
+var            = { ident }
+
+// Types
+kind         = { "R" | "V" }
+ground_type  = { "bool" | "u8" | "u32" | "u64" | "u128" | "address" | "bytearray" }
+module_alias = { module_name | "Self" }
+base_type    = { ground_type | kind ~ "#" ~ module_alias ~ "." ~ struct_name }
+ir_type      = { base_type | "&" ~ base_type | "&mut" ~ base_type }
+tau_list     = { "unit" | (ir_type)* }
+
+// Values
+unsigned       = { digit* }
+address        = { "0x" ~ ('0'..'9' | 'a'..'f' | 'A'..'F')* }
+bytes          = { "b\"" ~ (alpha | digit)* ~ "\"" }
+value          = { "true" | "false" | address | bytes | unsigned }
+SENDER_address = { "{{sender}}" }
+
+// Expression
+value_operator     = { "copy" ~ left_column ~ var ~ right_column | "move" ~ left_column ~ var ~ right_column }
+reference_operator = { "&" ~ var | "&" ~ exp ~ "." ~ field_name | "*" ~ exp }
+
+// Commands
+module_operator = { "move_from" ~ "<" ~ struct_name ~ ">" ~ left_column ~ exp ~ right_column | "borrow_global" ~ "<" ~ struct_name ~ ">" ~ left_column ~ exp ~ right_column | "exist" ~ "<" ~ struct_name ~ ">" ~ left_column ~ exp ~ right_column }
+
+builtin       = { builtin_start ~ left_column ~ exp ~ right_column }
+builtin_start = { "create_account" | "release" | "freeze" }
+call          = { module_operator | builtin | module_alias ~ "." ~ procedure_name ~ left_column ~ ((exp ~ ",")* ~ exp)? ~ right_column }
+cmd           = { var ~ equal ~ call | var* ~ equal ~ exp | call | "*" ~ var ~ equal ~ exp | "assert" ~ left_column ~ exp ~ "," ~ exp ~ right_column | "break" | "continue" | "return" ~ ((exp ~ ",")* ~ exp)? | struct_name ~ "{" ~ ((field_name ~ ":" ~ var ~ ",")* ~ field_name ~ ":" ~ var)? ~ "}" ~ equal ~ exp }
+equal         = { "=" }
+left_column   = { "(" }
+right_column  = { ")" }
+stmtx         = { stmt ~ stmtx | stmt }
+stmt          = { literal_if ~ left_column ~ exp ~ right_column ~ "{" ~ stmtx ~ "}" ~ literal_else ~ "{" ~ stmtx ~ "}" | literal_if ~ left_column ~ exp ~ right_column ~ "{" ~ stmtx ~ "}" | literal_while ~ left_column ~ exp ~ right_column ~ "{" ~ stmtx ~ "}" | literal_loop ~ "{" ~ stmtx ~ "}" | cmd ~ ";" }
+literal_if    = { "if" }
+literal_while = { "while" }
+literal_loop  = { "loop" }
+literal_else  = { "else" }
+expx          = { value_operator | reference_operator | struct_name ~ "{" ~ (field_name ~ ":" ~ expx)* ~ "}" | "!" ~ expx | value }
+exp           = { expx ~ binary_exp ~ exp | left_column ~ exp ~ right_column ~ exp | left_column ~ exp ~ right_column | expx }
+binary_exp    = { "||" | "&&" | ">=" | "<=" | ">" | "<" | "+" | "-" | "*" | "/" | "*" | "%" | "^" | "|" | "&" | "==" | "!=" }
+// Imports
+import_decl = { "import" ~ address ~ "." ~ module_name ~ "as" ~ module_name ~ ";" | "import" ~ address ~ "." ~ module_name ~ ";" }
+
+// Modules
+struct_decl    = { "resourse" ~ struct_name ~ "{" ~ (field_name ~ ":" ~ base_type ~ ",")* ~ field_name ~ ":" ~ base_type ~ " }" | "struct" ~ struct_name ~ "{" ~ ((field_name ~ ":" ~ base_type ~ ",")* ~ field_name ~ ":" ~ base_type)? ~ "}" }
+procedure_body = { ("let" ~ var ~ (":" ~ ground_type)? ~ ";")* ~ stmtx }
+procedure_decl = { "public"? ~ procedure_name ~ left_column ~ ((var ~ ":" ~ ir_type ~ ",")* ~ var ~ ":" ~ ir_type)? ~ right_column ~ ":" ~ tau_list ~ "{" ~ procedure_body ~ "}" | "native" ~ "public"? ~ procedure_name ~ left_column ~ ((var ~ ":" ~ ir_type ~ ",")* ~ var ~ ":" ~ ir_type)? ~ right_column ~ ":" ~ tau_list ~ ";" }
+module_decl    = { "module" ~ module_name ~ "{" ~ import_decl* ~ struct_decl* ~ procedure_decl* ~ "}" }
+
+// Transaction Scripts
+transaction_script = { import_decl* ~ "public" ~ "main" ~ left_column ~ ((var ~ ":" ~ ground_type ~ ",")* ~ var ~ ":" ~ ground_type)? ~ right_column }
+
+// Move script
+move_script = { (script_def | address_def | module_def)* }
+
+script_def = { "script" ~ "{" ~ (import_stmt | const_def | function_def)* ~ "}" }
+
+address_def = { "address" ~ (address | SENDER_address) ~ "{" ~ module_def* ~ "}" }
+
+module_def = { "module" ~ ident ~ "{" ~ moduleitem_item* ~ "}" }
+
+moduleitem_item = {
+    import_stmt
+  | friend_stmt
+  | struct_def
+  | function_def
+  | nat_struct_def
+  | nat_function_def
+  | const_def
+  | spec_def
+}
+
+const_def = { "const" ~ ident ~ typeannotation ~ equal ~ _expr ~ ";" }
+
+nat_function_def = { "native" ~ function_sig_withoptionalvisibility ~ ";" }
+nat_struct_def   = { "native" ~ struct_sig_ ~ ";" }
+
+function_sig_withoptionalvisibility = { function_sig_visibility | function_sig_ }
+function_sig_visibility             = { function_visibilitymodifier ~ function_sig_ }
+function_sig_                       = { "fun" ~ ident ~ typeparameterlist? ~ function_parameterlist ~ returntype? ~ acquirestype? }
+function_def                        = { function_sig_withoptionalvisibility ~ codeblock }
+
+function_visibilitymodifier = { "public" ~ (left_column ~ ("script" | "friend") ~ right_column)? }
+
+function_parameterlist = { left_column ~ ((function_parameter ~ ",")* ~ function_parameter)? ~ right_column }
+
+function_parameter = { ident ~ typeannotation }
+returntype         = { ":" ~ type_ }
+
+/// acquires t, record
+acquirestype               = { "acquires" ~ acquirestype_items }
+acquirestype_items         = { ((qual_pathtype ~ ",")* ~ qual_pathtype)? }
+acquirestype_items_recover = { !(";" | "{") }
+
+/// structs
+struct_sig_ = { "struct" ~ ident ~ typeparameterlist? ~ abilitieslist? }
+
+struct_def = { struct_sig_ ~ structfields_defblock }
+
+abilitieslist = { "has" ~ ((ability ~ ",")* ~ ability)? }
+ability       = { "copy" | ident }
+
+structfields_defblock = { "{" ~ structfield_def* ~ "}" }
+
+structfield_def = { ident ~ typeannotation ~ ("," | "}") }
+
+/// imports
+friend_stmt = { "friend" ~ fullyqualifiedmoduleref ~ ";" }
+
+import_stmt = { "use" ~ (module_items_import | module_import) ~ ";" }
+
+module_import       = { fullyqualifiedmoduleref ~ importalias? }
+module_items_import = { fullyqualifiedmoduleref ~ "::" ~ (item_import | multi_item_import) }
+
+multi_item_import = { "{" ~ ((item_import ~ ",")* ~ item_import)? ~ "}" }
+
+item_import = { ident ~ importalias? }
+
+importalias = { "as" ~ ident }
+
+/// types
+typeannotation = { literal_mao ~ type_ }
+literal_mao    = { ":" }
+type_          = { reftype | qual_pathtype | tupletype | lambdatype | ident }
+
+reftype                    = { "&" ~ "mut"? ~ type_ }
+qual_pathtype              = { qual_path }
+tupletype                  = { left_column ~ (type_ ~ ("," ~ type_))* ~ right_column }
+lambdatype                 = { "|" ~ ((type_ ~ ",")* ~ type_)? ~ "|" ~ type_ }
+typeparameterlist          = { "<" ~ typeparameter_with_recover* ~ ">" }
+typeparameter_with_recover = { !">" ~ typeparameter ~ ("," | &">") }
+typeparameter_recover      = { !(">" | left_column | "{" | ident) }
+typeparameter              = { ident ~ typeparambound? }
+typeparambound             = { ":" ~ typeparambound_items }
+typeparambound_items       = { ability ~ ("+" ~ ability)* }
+typeargumentlist           = { "<" ~ (type_ ~ ",")* ~ (type_)? ~ ">" }
+
+/// patterns (destructuring)
+_pat = {
+    deref_pat
+  | borrow_pat
+  | tuple_pat
+  | struct_pat
+  | dot_pat
+  | wild_pat
+  | binding_pat
+}
+
+wild_pat   = { "~_" }
+deref_pat  = { "*" ~ _pat }
+borrow_pat = { "&" ~ _pat }
+dot_pat    = { ident ~ "." ~ ident }
+
+binding_pat = { ident }
+
+tuple_pat = { left_column ~ ((_pat ~ ",")* ~ _pat)? ~ right_column }
+
+struct_pat             = { qual_path ~ struct_patfieldsblock }
+struct_patfieldsblock  = { "{" ~ struct_patfield* ~ "}" }
+struct_patfield        = { ident ~ struct_patfieldbinding? }
+struct_patfieldbinding = { ":" ~ _pat }
+
+/// _stmts
+_stmt      = { let_stmt | (_stmt_expr ~ ";") }
+let_stmt   = { "let" ~ _pat ~ typeannotation? ~ (equal ~ _expr)? ~ ";" }
+_stmt_expr = { if_expr | loop_expr | while_expr | _expr }
+anyblock   = { codeblock | inlineblock }
+
+inlineblock = { _expr }
+
+codeblock_expr = { codeblock }
+codeblock      = { "{" ~ codeblockitems ~ "}" }
+
+codeblockitems = { import_stmt* ~ (_stmt | blockspec_stmt)* ~ _expr? }
+
+/// Expressions
+_expr    = {
+    controlflow_expr
+  | unary_expr
+  | borrow_expr
+  | atom_expr
+}
+_exprx   = { (call_expr | ident) ~ (_expr_op ~ _expr | ident)* }
+_expr_op = { "==" | "!=" | "<=" | ">=" | ">" | "<" | "||" | "&&" | "|" | "&" | "^" | "as" | "*" | "/" | "+" | "-" | "%" | "<<" | ">>" | "==>" | "<==>" | "=" }
+
+controlflow_expr = { if_expr | loop_expr | while_expr }
+unary_expr       = {
+    copy_expr
+  | move_expr
+  | deref_expr
+  | bang_expr
+  | return_expr
+  | continue_expr
+  | break_expr
+  | abort_expr
+}
+atom_expr        = {
+    annotated_expr
+  | tupleliteral_expr
+  | parens_expr
+  | structliteral_expr
+  | dot_expr
+  | index_expr
+  | call_expr
+  | ref_expr
+  | lambda_expr
+  | range_expr
+  | codeblock_expr
+  | literal_expr
+}
+
+annotatedexpprefix = { left_column ~ _expr ~ ":" }
+annotated_expr     = { annotatedexpprefix ~ type_ ~ right_column }
+
+bang_expr  = { "!" ~ _expr }
+deref_expr = { "*" ~ _expr }
+
+copy_expr = { "copy" ~ _expr }
+move_expr = { "move" ~ _expr | "move_to" ~ _expr }
+
+return_expr   = { "return" ~ _expr? }
+abort_expr    = { "abort" ~ _expr }
+break_expr    = { "break" }
+continue_expr = { "continue" }
+
+structliteral_expr = { qual_path ~ structliteral_fieldsblock }
+
+structliteral_fieldsblock = { "{" ~ structliteral_field* ~ "}" }
+
+structliteral_field = { ident ~ structliteral_fieldassignment? }
+
+structliteral_fieldassignment = { ":" ~ _expr }
+
+parens_expr = { left_column ~ _expr ~ right_column }
+
+lambda_expr = { "|" ~ ((ident ~ ",")* ~ ident)? ~ "|" ~ _expr }
+range_expr  = { _exprx ~ ".." ~ _expr }
+
+tupleliteral_expr = { emptytuple_expr | tuple_expr }
+emptytuple_expr   = { left_column ~ right_column }
+tuple_expr        = { left_column ~ ((_expr ~ ",")* ~ _expr)? ~ right_column }
+
+literal_expr  = {
+    SENDER_address
+  | address
+  | value
+}
+call_expr     = { qual_path ~ callarguments }
+callarguments = { left_column ~ (_expr ~ ("," ~ _expr)*)? ~ right_column }
+
+if_expr = { literal_if ~ condition ~ anyblock ~ elseblock? }
+
+condition     = { left_column ~ conditionbody ~ right_column }
+conditionbody = { _expr }
+
+elseblock  = { "else" ~ anyblock }
+loop_expr  = { "loop" ~ anyblock }
+while_expr = { "while" ~ condition ~ anyblock }
+
+borrow_expr = { "&" ~ "mut"? ~ _expr }
+
+dot_expr = { _exprx ~ "." ~ structfieldref }
+
+structfieldref = { ident }
+
+index_expr = { _exprx ~ "[" ~ _expr ~ "]" }
+ref_expr   = { qual_path }
+qual_path  = { (moduleref ~ "::")? ~ ident ~ typeargumentlist? }
+
+moduleref = { ident | fullyqualifiedmoduleref }
+
+fullyqualifiedmoduleref = { (SENDER_address | address) ~ "::" ~ ident }
+
+/// specs
+spec_def = {
+    function_spec_def
+  | modulespec_def
+  | structspec_def
+  | schemaspec_def
+  | _definefunction_spec_def
+  | nat_definefunction_spec_def
+}
+
+schemaspec_def = { ("spec" | "schema") ~ ident ~ typeparameterlist? ~ specblock }
+
+function_spec_def = { ("spec" | "fun") ~ ident ~ specblock }
+
+structspec_def = { ("spec" | "struct") ~ ident ~ specblock }
+
+modulespec_def = { ("spec" | "module") ~ specblock }
+
+_definefunction_sig_ = { "define" ~ ident ~ typeparameterlist? ~ function_parameterlist ~ returntype? }
+
+_definefunction_ = { _definefunction_sig_ ~ specblock }
+
+nat_definefunction_ = { _definefunction_sig_ ~ ";" }
+
+blockspec_stmt = { "spec" ~ specblock ~ ";" }
+
+specblock               = { "{" ~ specblock_stmt* ~ specblockfinishing_expr? ~ "}" }
+specblock_stmt          = {
+    variable_stmt
+  | localvariable_stmt
+  | globalvariable_stmt // TODO
+
+  | import_stmt
+  | nat_function_def
+  | _definefunction_
+  | _definefunction_spec_def
+  | nat_definefunction_
+  | nat_definefunction_spec_def
+  | pragma_stmt
+  | assume_stmt
+  | assert_stmt
+  | abortsif_stmt
+  | succeedsif_stmt
+  | requires_stmt
+  | ensures_stmt
+  | modifies_stmt
+  | include_stmt
+  | invariant_stmt
+  | apply_stmt
+  | emits_stmt
+  | aggregatepredicate_stmt
+  | _stmt
+}
+specblockfinishing_expr = { spec_expr | aggregate_expr | _exprx }
+
+_definefunction_spec_def    = { "spec" ~ _definefunction_sig_ ~ specblock }
+nat_definefunction_spec_def = { "spec" ~ _definefunction_sig_ ~ ";" }
+variable_stmt               = { ref_expr ~ typeannotation ~ ";" }
+
+localvariable_stmt  = { "local" ~ ref_expr ~ typeannotation ~ ";" }
+globalvariable_stmt = { "global" ~ ref_expr ~ typeannotation ~ ";" }
+
+pragma_stmt     = { "pragma" ~ ((pragmaattribute ~ ",")* ~ pragmaattribute)? ~ ";" }
+pragmaattribute = { ident ~ (equal ~ literal_expr)? }
+
+spec_expr = {
+    assumespec_expr
+  | assertspec_expr
+  | abortsifspec_expr
+  | succeedsifspec_expr
+  | requiresspec_expr
+  | ensuresspec_expr
+  | modifiesspec_expr
+  | invariantspec_expr
+}
+
+assume_stmt     = { assumespec_expr ~ ";" }
+assumespec_expr = { "assume" ~ predicate }
+
+assert_stmt     = { assertspec_expr ~ ";" }
+assertspec_expr = { "assert" ~ predicate }
+
+abortsif_stmt     = { abortsifspec_expr ~ ";" }
+abortsifspec_expr = { "aborts_if" ~ predicate ~ with_expr? }
+with_expr         = { "with" ~ _exprx }
+
+succeedsif_stmt     = { succeedsifspec_expr ~ ";" }
+succeedsifspec_expr = { "succeeds_if" ~ predicate }
+
+requires_stmt     = { requiresspec_expr ~ ";" }
+requiresspec_expr = { "requires" ~ "module"? ~ predicate }
+
+ensures_stmt     = { ensuresspec_expr ~ ";" }
+ensuresspec_expr = { "ensures" ~ predicate }
+
+modifies_stmt     = { modifiesspec_expr ~ ";" }
+modifiesspec_expr = { "modifies" ~ _expr }
+
+include_stmt = { "include" ~ spec_visibility? ~ _expr ~ ";" }
+
+function_pattern = { ("public" | "internal")? ~ ident ~ typeargumentlist? }
+
+invariant_stmt     = { invariantspec_expr ~ ";" }
+invariantspec_expr = { "invariant" ~ invariantmodifier? ~ predicate }
+invariantmodifier  = { "pack" | "unpack" | "module" | "update" }
+
+spec_visibility         = { "[" ~ ((spec_visibilitymodifier ~ ",")* ~ spec_visibilitymodifier)? ~ "]" }
+spec_visibilitymodifier = {
+    "global"
+  | "isolated"
+  | "deactivated"
+  | "concrete"
+  | "abstract"
+  | "assert"
+  | "assume"
+}
+
+emits_stmt      = { "emits" ~ _expr ~ "to" ~ _expr ~ emits_condition? ~ ";" }
+emits_condition = { literal_if ~ _expr }
+apply_stmt      = { "apply" ~ apply_schema_name ~ "to" ~ ((function_pattern ~ ",")* ~ function_pattern)? ~ ("except" ~ ((function_pattern ~ ",")* ~ function_pattern)?)? ~ ";" }
+
+apply_schema_name = { qual_path ~ ("{" ~ ((apply_schema_name_attribute ~ ",")* ~ apply_schema_name_attribute)? ~ "}")? }
+
+apply_schema_name_attribute = { ident ~ ":" ~ _exprx }
+
+predicate               = { spec_visibility? ~ (aggregate_expr | _exprx) }
+aggregatepredicate_stmt = { aggregate_expr ~ ";" }
+aggregate_expr          = { quant_expr ~ (":" ~ _expr)? }
+
+quant_where  = { "where" ~ _expr }
+quant_expr   = { forall_quant | exist_quant }
+forall_quant = { "forall" ~ quant_bindings ~ (quant_where)? ~ (":" ~ quant_expr)? }
+exist_quant  = { "exists" ~ quant_bindings ~ (quant_where)? ~ (":" ~ quant_expr)? }
+
+quant_bindings = { ((quant_bind ~ ",")* ~ quant_bind)? }
+quant_bind     = { ident ~ "in" ~ range_expr | ident ~ ":" ~ type_ }
