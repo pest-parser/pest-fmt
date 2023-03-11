@@ -13,8 +13,6 @@ fn main() -> Result<(), Box<dyn Error>> {
                 if let Ok(changed) = format_file(path, path) {
                     if changed {
                         println!("Formatted {}", path);
-                    } else {
-                        println!("Unchanged {}", path);
                     }
                 }
             } else {
@@ -67,8 +65,6 @@ pub fn format_directory(walker: WalkBuilder) -> Result<usize, Box<dyn Error>> {
                         if changed {
                             println!("Formatted {}", path);
                             files += 1;
-                        } else {
-                            println!("Unchanged {}", path);
                         }
                     }
                 }
