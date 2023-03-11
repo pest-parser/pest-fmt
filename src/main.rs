@@ -20,7 +20,11 @@ fn main() -> Result<(), Box<dyn Error>> {
             } else {
                 let walker = build_walker(path);
                 let files = format_directory(walker)?;
-                println!("Formatted {} files", files);
+                if files == 0 {
+                    println!("No file has been formatted");
+                } else {
+                    println!("Formatted {} files", files);
+                }
             }
         } else {
             println!("No such file or directory: {}", path);
@@ -29,7 +33,11 @@ fn main() -> Result<(), Box<dyn Error>> {
         // Format all files in the current directory
         let walker = build_walker(".");
         let files = format_directory(walker)?;
-        println!("Formatted {} files", files);
+        if files == 0 {
+            println!("No file has been formatted");
+        } else {
+            println!("Formatted {} files", files);
+        }
     }
 
     Ok(())
