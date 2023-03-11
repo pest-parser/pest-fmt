@@ -123,7 +123,8 @@ impl Formatter<'_> {
         }
 
         // Remove leading and trailing whitespace
-        output.trim().to_string()
+        // And add a newline at the end of the file 
+        format!("{}\n", output.trim())
     }
 
     fn format_grammar_rule(&self, pair: Pair<Rule>) -> PestResult<Node> {
