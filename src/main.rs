@@ -7,25 +7,27 @@ fn main() -> Result<(), Box<dyn Error>> {
     let argv: Vec<String> = std::env::args().collect();
     // Check if we have a path to format
     if argv.len() > 1 {
-        let path = &argv[1];
-        if Path::new(path).exists() {
-            if Path::new(path).is_file() {
-                if let Ok(changed) = format_file(path, path) {
-                    if changed {
-                        println!("Formatted {}", path);
+        let paths = &argv[1..];
+        for path in paths {
+            if Path::new(path).exists() {
+                if Path::new(path).is_file() {
+                    if let Ok(changed) = format_file(path, path) {
+                        if changed {
+                            println!("Formatted {}", path);
+                        }
+                    }
+                } else {
+                    let walker = build_walker(path);
+                    let files = format_directory(walker)?;
+                    if files == 0 {
+                        println!("No file has been formatted");
+                    } else {
+                        println!("Formatted {} files", files);
                     }
                 }
             } else {
-                let walker = build_walker(path);
-                let files = format_directory(walker)?;
-                if files == 0 {
-                    println!("No file has been formatted");
-                } else {
-                    println!("Formatted {} files", files);
-                }
+                println!("No such file or directory: {}", path);
             }
-        } else {
-            println!("No such file or directory: {}", path);
         }
     } else {
         // Format all files in the current directory
