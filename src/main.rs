@@ -4,41 +4,35 @@ use std::{error::Error, fs, path::Path};
 use toml::Value;
 
 fn main() -> Result<(), Box<dyn Error>> {
+    // TODO: Rewrite this to use clap
     let argv: Vec<String> = std::env::args().collect();
-    // Check if we have a path to format
-    if argv.len() > 1 {
-        let paths = &argv[1..];
-        for path in paths {
-            if Path::new(path).exists() {
-                if Path::new(path).is_file() {
-                    if let Ok(changed) = format_file(path, path) {
-                        if changed {
-                            println!("Formatted {}", path);
-                        }
-                    }
-                } else {
-                    let walker = build_walker(path);
-                    let files = format_directory(walker)?;
-                    if files == 0 {
-                        println!("No file has been formatted");
-                    } else {
-                        println!("Formatted {} files", files);
+    let mut updated = 0;
+
+    let mut paths = argv[1..].to_vec();
+
+    // If there not argument, format the current directory
+    if paths.is_empty() {
+        paths.push(".".to_string());
+    }
+
+    for path in paths {
+        if Path::new(&path).exists() {
+            if Path::new(&path).is_file() {
+                if let Ok(changed) = format_file(&path, &path) {
+                    if changed {
+                        updated += 1
                     }
                 }
             } else {
-                println!("No such file or directory: {}", path);
+                let walker = build_walker(&path);
+                updated += format_directory(walker)?;
             }
-        }
-    } else {
-        // Format all files in the current directory
-        let walker = build_walker(".");
-        let files = format_directory(walker)?;
-        if files == 0 {
-            println!("No file has been formatted");
         } else {
-            println!("Formatted {} files", files);
+            println!("No such file or directory: {}", path);
         }
     }
+
+    println!("Formatted {} files", updated);
 
     Ok(())
 }
@@ -56,7 +50,7 @@ pub fn format_file<P: AsRef<Path>>(path_from: P, path_to: P) -> PestResult<bool>
 /// Format all files in the given directory.
 /// Returns the number of files that were formatted.
 pub fn format_directory(walker: WalkBuilder) -> Result<usize, Box<dyn Error>> {
-    let mut files = 0;
+    let mut updated = 0;
     for entry in walker.build() {
         let entry = entry?;
         let path = entry.path();
@@ -65,8 +59,7 @@ pub fn format_directory(walker: WalkBuilder) -> Result<usize, Box<dyn Error>> {
                 if path.ends_with(".pest") {
                     if let Ok(changed) = format_file(path, path) {
                         if changed {
-                            println!("Formatted {}", path);
-                            files += 1;
+                            updated += 1;
                         }
                     }
                 }
@@ -74,7 +67,7 @@ pub fn format_directory(walker: WalkBuilder) -> Result<usize, Box<dyn Error>> {
         }
     }
 
-    Ok(files)
+    Ok(updated)
 }
 
 fn build_walker(root: &str) -> WalkBuilder {
