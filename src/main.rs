@@ -3,6 +3,40 @@ use pest_fmt::{Formatter, PestResult};
 use std::{error::Error, fs, path::Path};
 use toml::Value;
 
+fn main() -> Result<(), Box<dyn Error>> {
+    // TODO: Rewrite this to use clap
+    let argv: Vec<String> = std::env::args().collect();
+    let mut updated = 0;
+
+    let mut paths = argv[1..].to_vec();
+
+    // If there not argument, format the current directory
+    if paths.is_empty() {
+        paths.push(".".to_string());
+    }
+
+    for path in paths {
+        if Path::new(&path).exists() {
+            if Path::new(&path).is_file() {
+                if let Ok(changed) = format_file(&path, &path) {
+                    if changed {
+                        updated += 1
+                    }
+                }
+            } else {
+                let walker = build_walker(&path);
+                updated += format_directory(walker)?;
+            }
+        } else {
+            println!("No such file or directory: {}", path);
+        }
+    }
+
+    println!("Formatted {} files", updated);
+
+    Ok(())
+}
+
 pub fn format_file<P: AsRef<Path>>(path_from: P, path_to: P) -> PestResult<bool> {
     let input = std::fs::read_to_string(path_from)?;
     let fmt = Formatter::new(&input);
@@ -13,34 +47,27 @@ pub fn format_file<P: AsRef<Path>>(path_from: P, path_to: P) -> PestResult<bool>
     Ok(input != output)
 }
 
-fn main() -> Result<(), Box<dyn Error>> {
-    let walker = build_walker(".");
-
-    println!("Pest Formatter");
-    println!("-------------------------------------");
-
-    let mut count = 0;
-
+/// Format all files in the given directory.
+/// Returns the number of files that were formatted.
+pub fn format_directory(walker: WalkBuilder) -> Result<usize, Box<dyn Error>> {
+    let mut updated = 0;
     for entry in walker.build() {
-        let entry = entry.unwrap();
+        let entry = entry?;
         let path = entry.path();
-
         if path.is_file() {
-            match format_file(&path, &path) {
-                Ok(changed) => {
-                    if changed {
-                        count += 1
+            if let Some(path) = path.to_str() {
+                if path.ends_with(".pest") {
+                    if let Ok(changed) = format_file(path, path) {
+                        if changed {
+                            updated += 1;
+                        }
                     }
-                }
-                Err(err) => {
-                    eprintln!("Error: {} {:?}", path.display(), err)
                 }
             }
         }
     }
 
-    println!("{count} files formatted.");
-    Ok(())
+    Ok(updated)
 }
 
 fn build_walker(root: &str) -> WalkBuilder {
