@@ -27,6 +27,8 @@ jobs:
         run: cargo build
       - name: Tests
         run: cargo test
+      - name: Test Cli
+        run: make test
   lint:
     name: Lint
     runs-on: ubuntu-latest

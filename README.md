@@ -14,31 +14,56 @@ cargo install pest_fmt
 
 Then use the `pestfmt` command to format your `.pest` files.
 
-```shell
-pestfmt .
+```bash
+$ pestfmt -h
+A formatter tool for pest
+
+Usage: pestfmt [OPTIONS] [FILE]...
+
+Arguments:
+  [FILE]...  The file or path to format [default: .]
+
+Options:
+  -s, --stdin
+  -h, --help     Print help
+  -V, --version  Print version
 ```
 
-It will find all `.pest` files in the current directory and format them.
+### Format pest files
+
+```bash
+$ pestfmt .
+```
+
+It will find all `.pest` files in the current directory and format and overwrite them.
 
 Output:
 
-```
+```bash
 Pest Formatter
 -------------------------------------
 2 files formatted.
 ```
 
-## Usage as a library
+### Format from stdin
+
+You can use `--stdin` option to format Pest source code from stdin, it will read from stdin and write to stdout.
+
+```bash
+cat file.pest | pestfmt --stdin
+```
+
+### Usage as a library
 
 Add `pest_fmt` into your `Cargo.toml`:
 
-```
-cargo add pest_fmt
+```bash
+$ cargo add pest_fmt
 ```
 
 Then use the `Formatter` struct to format pest grammar.
 
-```rust
+```rs
 use pest_fmt::Formatter;
 
 let mut fmt = Formatter::new("a={ASCII_DIGIT}");
