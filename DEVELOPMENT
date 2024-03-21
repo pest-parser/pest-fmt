@@ -1,0 +1,20 @@
+## Development Guide
+
+- Run `make test` to test all.
+
+## Update Pest original `grammar.pest`.
+
+The `src/grammar.pest` file is a copy of the original
+[grammar.pest](https://github.com/pest-parser/pest/blob/master/meta/src/grammar.pest) file from the Pest repository.
+
+To update it, run the following command:
+
+But it have a little bit different from the original file:
+
+```diff
+-COMMENT = _{ block_comment | line_comment }
++COMMENT = { block_comment | line_comment }
+```
+
+The `make update_grammar` command will update the `src/grammar.pest` from the original file and
+apply the above change (by `src/grammar.patch` file).

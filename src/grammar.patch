@@ -1,0 +1,11 @@
+--- src/grammar.old.pest	2024-03-21 10:23:36
++++ src/grammar.pest	2024-03-21 10:24:27
+@@ -209,7 +209,7 @@ COMMENT = _{ block_comment | line_comment }
+ block_comment = _{ "/*" ~ (block_comment | !"*/" ~ ANY)* ~ "*/" }
+ 
+ /// A grammar comment.
+-COMMENT = _{ block_comment | line_comment }
++COMMENT = { block_comment | line_comment }
+ 
+ // ref: https://doc.rust-lang.org/reference/comments.html
+ /// A space character.
