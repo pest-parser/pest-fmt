@@ -14,8 +14,9 @@
 //! may translate into semver-breaking changes due to the additional variants
 //! added to the `Rule` enum. This is a known issue and will be fixed in the
 //! future (e.g. by increasing MSRV and non_exhaustive annotations).
+
 /// The top-level rule of a grammar.
-grammar_rules = _{ SOI ~ grammar_doc* ~ (grammar_rule)+ ~ EOI }
+grammar_rules = _{ SOI ~ grammar_doc* ~ grammar_rule* ~ EOI }
 
 /// A rule of a grammar.
 grammar_rule = {
@@ -64,11 +65,17 @@ compound_atomic_modifier = { "$" }
 /// Non-atomic rule prefix.
 non_atomic_modifier = { "!" }
 
+/// A tag label.
+tag_id = @{ "#" ~ ("_" | alpha) ~ ("_" | alpha_num)* }
+
+/// For assigning labels to nodes.
+node_tag = _{ tag_id ~ assignment_operator }
+
 /// A rule expression.
 expression = { choice_operator? ~ term ~ (infix_operator ~ term)* }
 
 /// A rule term.
-term = { prefix_operator* ~ node ~ postfix_operator* }
+term = { node_tag? ~ prefix_operator* ~ node ~ postfix_operator* }
 
 /// A rule node (inside terms).
 node = _{ opening_paren ~ expression ~ closing_paren | terminal }
@@ -203,6 +210,7 @@ block_comment = _{ "/*" ~ (block_comment | !"*/" ~ ANY)* ~ "*/" }
 
 /// A grammar comment.
 COMMENT = { block_comment | line_comment }
+
 // ref: https://doc.rust-lang.org/reference/comments.html
 /// A space character.
 space = _{ " " | "\t" }
@@ -211,7 +219,7 @@ space = _{ " " | "\t" }
 grammar_doc = ${ "//!" ~ space? ~ inner_doc }
 
 /// A rule comment.
-line_doc = ${ "///" ~ space? ~ !"/" ~ inner_doc }
+line_doc = ${ "///" ~ space? ~ inner_doc }
 
 /// A comment content.
 inner_doc = @{ (!newline ~ ANY)* }
