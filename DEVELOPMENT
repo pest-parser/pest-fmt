@@ -7,9 +7,7 @@
 The `src/grammar.pest` file is a copy of the original
 [grammar.pest](https://github.com/pest-parser/pest/blob/master/meta/src/grammar.pest) file from the Pest repository.
 
-To update it, run the following command:
-
-But it have a little bit different from the original file:
+But it is a little bit different from the original file:
 
 ```diff
 -COMMENT = _{ block_comment | line_comment }
