@@ -123,7 +123,7 @@ impl Formatter<'_> {
         }
 
         // Remove leading and trailing whitespace
-        // And add a newline at the end of the file 
+        // And add a newline at the end of the file
         format!("{}\n", output.trim())
     }
 
@@ -237,15 +237,14 @@ impl Formatter<'_> {
                     code.push_str(&comment);
                     code.push('\n');
                 }
-                Rule::negative_predicate_operator => code.push_str(pair.as_str()),
-                Rule::positive_predicate_operator => code.push_str(pair.as_str()),
-                Rule::repeat_once_operator => code.push_str(pair.as_str()),
-                Rule::optional_operator => code.push_str(pair.as_str()),
-                Rule::repeat_operator => code.push_str(pair.as_str()),
-                Rule::opening_paren => code.push_str(pair.as_str()),
-                Rule::closing_paren => code.push_str(pair.as_str()),
-                Rule::identifier => code.push_str(pair.as_str()),
-                Rule::string => code.push_str(pair.as_str()),
+                Rule::tag_id => {
+                    code.push_str(pair.as_str());
+                    code.push(' ');
+                }
+                Rule::assignment_operator => {
+                    code.push('=');
+                    code.push(' ');
+                }
                 Rule::insensitive_string => {
                     code.push('^');
                     for inner in pair.into_inner() {
@@ -422,6 +421,20 @@ mod tests {
               | "2" // comment4
               | "a" | "b" | "c" | "d" | "e")
             }
+            "#,
+        }
+    }
+
+    #[test]
+    fn test_tag() {
+        expect_correction! {
+            r#"
+            some_rule = {  #tag = "test" ~"rule"~"one" }
+            another_rule_with_a_long_name = {  "test" ~ "rule" ~ "two" ~ "with" ~ "a" ~ "long" ~ "name" }
+            "#,
+            r#"
+            some_rule                     = { #tag = "test" ~ "rule" ~ "one" }
+            another_rule_with_a_long_name = { "test" ~ "rule" ~ "two" ~ "with" ~ "a" ~ "long" ~ "name" }
             "#,
         }
     }
